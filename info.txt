@@ -1,0 +1,3 @@
+http://localhost:8000 — formularul de rezervare pentru clienți
+http://localhost:8000/admin — panoul frizerului (parola: frizer2024)
+http://localhost:8000/docs — documentația API generată automat de FastAPI

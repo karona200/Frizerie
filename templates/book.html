@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% block title %}Rezervare — {{ app_name }}{% endblock %}
+
+{% block header_right %}
+<a href="/schedule" style="color:var(--text2);text-decoration:none;font-size:.9rem;padding:.5rem;border-radius:var(--radius-sm);background:var(--bg3);transition:all .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">
+    Vezi orar
+</a>
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Rezerva</h1>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+<style>
+.frizer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.frizer-card { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 1rem; cursor: pointer; transition: all .15s; text-align: center; }
+.frizer-card:hover { border-color: #555; background: #222; }
+.frizer-card.selected { background: var(--text); color: #000; border-color: var(--text); }
+.frizer-image { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin: 0 auto .75rem; display: block; background: var(--bg2); border: 2px solid var(--border); }
+.frizer-info h3 { font-size: 1rem; font-weight: 600; margin-bottom: .25rem; }
+.frizer-info p { font-size: .8rem; color: var(--text2); line-height: 1.3; }
+.frizer-card.selected .frizer-info p { color: rgba(0,0,0,.7); }
+.service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.service-card { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 1rem; cursor: pointer; transition: all .15s; }
+.service-card:hover { border-color: #555; background: #222; }
+.service-card.selected { background: var(--text); color: #000; border-color: var(--text); }
+.service-info h3 { font-size: 1rem; font-weight: 600; margin-bottom: .25rem; }
+.service-info p { font-size: .85rem; color: var(--text2); line-height: 1.3; margin-bottom: .5rem; }
+.service-card.selected .service-info p { color: rgba(0,0,0,.7); }
+.service-price { font-weight: 600; color: var(--accent); margin-top: .5rem; }
+.service-card.selected .service-price { color: rgba(0,0,0,.8); }
+</style>
+<!-- Step indicators -->
+<div class="steps">
+    <div class="step-dot active" id="dot-1"></div>
+    <div class="step-dot" id="dot-2"></div>
+    <div class="step-dot" id="dot-3"></div>
+    <div class="step-dot" id="dot-4"></div>
+    <div class="step-dot" id="dot-5"></div>
+</div>
+
+<!-- Step 1: Frizer -->
+<div id="step-1">
+    <p class="section-label">Alege frizerul</p>
+    <div class="frizer-grid" id="frizer-grid">
+        {% for frizer in frizers %}
+        <div class="frizer-card" onclick="selectFrizer({{ frizer.id }}, '{{ frizer.name }}', this)">
+            {% if frizer.image_path %}
+            <img src="{{ frizer.image_path }}" alt="{{ frizer.name }}" class="frizer-image">
+            {% endif %}
+            <div class="frizer-info">
+                <h3>{{ frizer.name }}</h3>
+                {% if frizer.description %}
+                <p>{{ frizer.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <input type="hidden" id="selected-frizer" value="">
+    <button class="btn btn-primary btn-full" onclick="goToStep2()" id="btn-step2-from-1"
+            disabled style="opacity:.35;margin-top:.5rem">Continua</button>
+</div>
+
+<!-- Step 1.5: Service -->
+<div id="step-1-5" style="display:none">
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
+        <button onclick="goToStep(1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.2rem;padding:.25rem">←</button>
+        <div>
+            <p class="section-label" style="margin:0">Frizer selectat</p>
+            <p style="font-weight:600;font-size:.95rem" id="frizer-display-step1-5"></p>
+        </div>
+    </div>
+
+    <p class="section-label">Alege serviciul</p>
+    <div id="services-loading" style="color:var(--text2);font-size:.9rem;padding:1rem 0">Se incarca serviciile...</div>
+    <div class="service-grid" id="service-grid" style="display:none">
+        {% for service in services %}
+        <div class="service-card" onclick="selectService({{ service.id }}, '{{ service.name }}', {{ service.price or 'null' }}, this)">
+            <div class="service-info">
+                <h3>{{ service.name }}</h3>
+                {% if service.description %}
+                <p>{{ service.description }}</p>
+                {% endif %}
+                {% if service.price %}
+                <p class="service-price">{{ service.price }} lei</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <input type="hidden" id="selected-service" value="">
+    <button class="btn btn-primary btn-full" onclick="goToStep2FromService()" id="btn-step2-from-1-5"
+            disabled style="opacity:.35;margin-top:.5rem">Continua</button>
+</div>
+
+<!-- Step 2: Data -->
+<div id="step-2" style="display:none">
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
+        <button onclick="goToStep(1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.2rem;padding:.25rem">←</button>
+        <div>
+            <p class="section-label" style="margin:0">Frizer selectat</p>
+            <p style="font-weight:600;font-size:.95rem" id="frizer-display"></p>
+        </div>
+    </div>
+
+    <p class="section-label">Alege data</p>
+    <div class="card" style="padding:1rem">
+        <input type="date" id="date-input" min="{{ today }}"
+               value="{{ selected_date }}"
+               style="margin:0;font-size:1.1rem;font-weight:600;background:transparent;border:none;padding:.25rem 0;color:var(--text);width:100%">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="goToStep3()">Continua</button>
+</div>
+
+<!-- Step 3: Ora -->
+<div id="step-3" style="display:none">
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
+        <button onclick="goToStep(2)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.2rem;padding:.25rem">←</button>
+        <div>
+            <p class="section-label" style="margin:0">Data selectata</p>
+            <p style="font-weight:600;font-size:.95rem" id="date-display"></p>
+        </div>
+    </div>
+
+    <p class="section-label">Ora disponibila</p>
+    <div id="slots-loading" style="color:var(--text2);font-size:.9rem;padding:1rem 0">Se incarca orele...</div>
+    <div class="time-grid" id="slots-grid" style="display:none"></div>
+    <input type="hidden" id="selected-time" value="">
+    <p id="no-slots" style="display:none;color:var(--text2);font-size:.9rem;padding:.5rem 0">Nu sunt ore disponibile in aceasta zi.</p>
+
+    <button class="btn btn-primary btn-full" onclick="goToStep4()" id="btn-step4"
+            disabled style="opacity:.35;margin-top:.5rem">Continua</button>
+</div>
+
+<!-- Step 4: Date personale -->
+<div id="step-4" style="display:none">
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
+        <button onclick="goToStep(3)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.2rem;padding:.25rem">←</button>
+        <div>
+            <p class="section-label" style="margin:0">Programare</p>
+            <p style="font-weight:600;font-size:.95rem" id="summary-display"></p>
+        </div>
+    </div>
+
+    <form method="post" action="/book" id="booking-form">
+        <input type="hidden" name="date" id="form-date">
+        <input type="hidden" name="time" id="form-time">
+        <input type="hidden" name="frizer_id" id="form-frizer">
+        <input type="hidden" name="service_id" id="form-service">
+
+        <label>Numele tau</label>
+        <input type="text" name="client_name" placeholder="Ion Popescu" required autocomplete="name">
+
+        <label>Telefon</label>
+        <input type="tel" name="client_phone" placeholder="07xx xxx xxx" required autocomplete="tel">
+
+        <button class="btn btn-primary btn-full" type="submit" id="btn-submit">
+            <span id="btn-text">Confirma rezervarea</span>
+            <span class="spinner" id="btn-spinner"></span>
+        </button>
+    </form>
+</div>
+
+<script>
+const TODAY    = "{{ today }}";
+const SELECTED = "{{ selected_date }}";
+
+const DAYS   = ["Duminica","Luni","Marti","Miercuri","Joi","Vineri","Sambata"];
+const MONTHS = ["ian","feb","mar","apr","mai","iun","iul","aug","sep","oct","nov","dec"];
+let currentStep = 1;
+
+function formatDate(str) {
+    if (!str) return '';
+    const d = new Date(str + 'T00:00:00');
+    return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function goToStep(n) {
+    document.getElementById('step-' + currentStep).style.display = 'none';
+    document.getElementById('step-' + n).style.display = 'block';
+    for (let i = 1; i <= 5; i++)
+        document.getElementById('dot-' + i).classList.toggle('active', i <= n);
+    currentStep = n;
+    window.scrollTo(0, 0);
+}
+
+// Step 1 -> 1.5 (Frizer -> Service)
+function goToStep2() {
+    const frizer = document.getElementById('selected-frizer').value;
+    if (!frizer) return;
+    const frizer_name = document.querySelector('.frizer-card.selected .frizer-info h3')?.textContent || 'Frizer selectat';
+    document.getElementById('frizer-display-step1-5').textContent = frizer_name;
+    
+    // Load services for selected frizer
+    loadServicesForFrizer(frizer);
+    goToStep('1-5');
+}
+
+// Step 1.5 -> 2 (Service -> Data)
+function goToStep2FromService() {
+    const service = document.getElementById('selected-service').value;
+    if (!service) return;
+    const frizer_name = document.getElementById('frizer-display-step1-5').textContent;
+    document.getElementById('frizer-display').textContent = frizer_name;
+    goToStep(2);
+}
+
+// Step 2 -> 3 (Data -> Ora)
+function goToStep3() {
+    const date = document.getElementById('date-input').value;
+    if (!date || date < TODAY) return;
+    document.getElementById('date-display').textContent = formatDate(date);
+    goToStep(3);
+    loadSlots(date);
+}
+
+// Step 3 -> 4 (Ora -> Date personale)
+function goToStep4() {
+    const time = document.getElementById('selected-time').value;
+    const date = document.getElementById('date-input').value;
+    const frizer = document.getElementById('selected-frizer').value;
+    const service = document.getElementById('selected-service').value;
+    if (!time || !service) return;
+    
+    const frizer_name = document.querySelector('.frizer-card.selected .frizer-info h3')?.textContent || 'Frizer';
+    const service_name = document.querySelector('.service-card.selected .service-info h3')?.textContent || 'Serviciu';
+    document.getElementById('summary-display').textContent = 
+        frizer_name + ' · ' + service_name + ' · ' + formatDate(date) + ' · ' + time;
+    
+    document.getElementById('form-date').value = date;
+    document.getElementById('form-time').value = time;
+    document.getElementById('form-frizer').value = frizer;
+    document.getElementById('form-service').value = service;
+    goToStep(4);
+}
+
+async function loadSlots(date) {
+    const frizer_id = document.getElementById('selected-frizer').value;
+    if (!frizer_id) {
+        document.getElementById('slots-loading').textContent = 'Te rog selecteaza un frizer intai.';
+        return;
+    }
+    
+    document.getElementById('slots-loading').style.display = 'block';
+    document.getElementById('slots-grid').style.display    = 'none';
+    document.getElementById('no-slots').style.display      = 'none';
+    try {
+        const data = await fetch(`/slots/${date}?frizer_id=${frizer_id}`).then(r => r.json());
+        document.getElementById('slots-loading').style.display = 'none';
+        if (!data.length) { 
+            document.getElementById('no-slots').style.display = 'block'; 
+            return; 
+        }
+        const grid = document.getElementById('slots-grid');
+        grid.innerHTML = '';
+        data.forEach(slot => {
+            const el = document.createElement('div');
+            el.className   = 'time-slot';
+            el.textContent = slot.time;
+            el.onclick = function() { selectSlot(this, slot.time); };
+            grid.appendChild(el);
+        });
+        grid.style.display = 'grid';
+    } catch(e) {
+        document.getElementById('slots-loading').textContent = 'Eroare la incarcare.';
+    }
+}
+
+function selectSlot(el, time) {
+    document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('selected-time').value = time;
+    const btn = document.getElementById('btn-step4');
+    btn.disabled = false;
+    btn.style.opacity = '1';
+}
+
+function selectFrizer(id, name, el) {
+    document.querySelectorAll('.frizer-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('selected-frizer').value = id;
+    const btn = document.getElementById('btn-step2-from-1');
+    btn.disabled = false;
+    btn.style.opacity = '1';
+}
+
+async function loadServicesForFrizer(frizer_id) {
+    document.getElementById('services-loading').style.display = 'block';
+    document.getElementById('service-grid').style.display = 'none';
+    try {
+        const response = await fetch(`/services/frizer/${frizer_id}`);
+        const services = await response.json();
+        document.getElementById('services-loading').style.display = 'none';
+        if (!services.length) {
+            document.getElementById('services-loading').textContent = 'Nu sunt servicii disponibile pentru acest frizer.';
+            return;
+        }
+        const grid = document.getElementById('service-grid');
+        grid.innerHTML = '';
+        services.forEach(service => {
+            const el = document.createElement('div');
+            el.className = 'service-card';
+            el.innerHTML = `
+                <div class="service-info">
+                    <h3>${service.name}</h3>
+                    ${service.description ? `<p>${service.description}</p>` : ''}
+                    ${service.price ? `<p class="service-price">${service.price} lei</p>` : ''}
+                </div>
+            `;
+            el.onclick = function() { selectService(service.id, service.name, service.price, this); };
+            grid.appendChild(el);
+        });
+        grid.style.display = 'grid';
+    } catch(e) {
+        document.getElementById('services-loading').textContent = 'Eroare la incarcare servicii.';
+    }
+}
+
+function selectService(id, name, price, el) {
+    document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('selected-service').value = id;
+    const btn = document.getElementById('btn-step2-from-1-5');
+    btn.disabled = false;
+    btn.style.opacity = '1';
+}
+
+document.getElementById('booking-form')?.addEventListener('submit', () => {
+    document.getElementById('btn-text').style.display    = 'none';
+    document.getElementById('btn-spinner').style.display = 'block';
+});
+
+if (SELECTED) { 
+    document.getElementById('date-input').value = SELECTED; 
+}
+</script>
+{% endblock %}

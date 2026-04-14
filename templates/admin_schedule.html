@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}Orar — {{ app_name }}{% endblock %}
+{% set page_class = "page-wide" %}
+
+{% block content %}
+<div class="page-wide">
+
+<h1 class="page-title" style="margin-top:.5rem">Orar de lucru</h1>
+
+{% if saved %}
+<div class="alert alert-success">Orarul a fost salvat.</div>
+{% endif %}
+{% if errors %}
+{% for err in errors %}
+<div class="alert alert-error">{{ err }}</div>
+{% endfor %}
+{% endif %}
+
+<!-- Frizer selector -->
+<div style="margin-bottom:1.5rem;padding:1rem;background:var(--bg2);border-radius:var(--radius-sm)">
+    <label style="display:block;margin-bottom:.5rem;font-weight:500">Selectia frizerul</label>
+    <select id="frizer-selector" style="margin-bottom:0" onchange="changeFrizer(this.value)">
+        {% for frizer in frizers %}
+        <option value="{{ frizer.id }}" {% if selected_frizer and selected_frizer.id == frizer.id %}selected{% endif %}>
+            {{ frizer.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+
+<p class="muted" style="font-size:.85rem;margin-bottom:1.25rem">
+    Seteaza intervalele orare in care clientii pot face programari.
+</p>
+
+<form method="post" action="/admin/schedule/update" id="schedule-form">
+    <input type="hidden" name="frizer_id" id="form-frizer-id" value="{{ selected_frizer.id if selected_frizer else '' }}">
+    
+    <div class="card-flush">
+        {% for day in days %}
+        <div class="day-row" id="day-row-{{ day.weekday }}">
+            <span class="day-name"
+                  style="color:{{ 'var(--text2)' if day.weekday >= 5 else 'var(--text)' }}">
+                {{ day.day_name }}
+            </span>
+
+            <div class="day-times" id="day-times-{{ day.weekday }}"
+                 style="opacity:{{ '1' if day.is_active else '.3' }}">
+                <input type="time" name="start_{{ day.weekday }}"
+                       value="{{ day.start_time.strftime('%H:%M') }}"
+                       {% if not day.is_active %}disabled{% endif %}>
+                <span class="muted" style="font-size:.8rem;flex-shrink:0">—</span>
+                <input type="time" name="end_{{ day.weekday }}"
+                       value="{{ day.end_time.strftime('%H:%M') }}"
+                       {% if not day.is_active %}disabled{% endif %}>
+            </div>
+
+            <label class="toggle">
+                <input type="checkbox" name="active_{{ day.weekday }}"
+                       {% if day.is_active %}checked{% endif %}
+                       onchange="toggleDay({{ day.weekday }}, this.checked)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        {% endfor %}
+    </div>
+
+    <button class="btn btn-primary btn-full" type="submit">Salveaza</button>
+    <a href="/admin/dashboard" class="btn btn-ghost btn-full" style="margin-top:.5rem">Inapoi</a>
+</form>
+
+<div style="margin-top:2rem">
+    <h2 class="page-title" style="font-size:1.1rem;margin-top:0">Exceptii pentru date specifice</h2>
+    <p class="muted" style="font-size:.85rem;margin-bottom:1rem">
+        Seteaza un orar doar pentru o data concreta fara sa modifici orarul pentru toate zilele de aceeasi zi din saptamana.
+    </p>
+
+    <div class="card-flush">
+        <form method="post" action="/admin/schedule/override" id="override-form">
+            <input type="hidden" name="frizer_id" id="override-frizer-id" value="{{ selected_frizer.id if selected_frizer else '' }}">
+            
+            <div class="day-row" style="align-items:center;">
+                <span class="day-name" style="min-width:120px;">Data</span>
+                <div class="day-times" style="display:flex;gap:.5rem;flex:1;align-items:center;opacity:1;">
+                    <input type="date" name="override_date" style="flex:1;min-width:130px">
+                </div>
+            </div>
+            <div class="day-row" style="align-items:center;">
+                <span class="day-name" style="min-width:120px;">Interval</span>
+                <label style="display:flex;align-items:center;gap:.4rem;margin-left:1rem;white-space:nowrap;">
+                    <input type="checkbox" id="override-active-check" name="override_active"
+                           onchange="toggleOverrideType()">
+                    <span style="font-weight:500">Zi libera</span>
+                </label>
+            </div>
+            <div class="day-row" style="align-items:center;" id="override-times-row">
+                <span class="day-name" style="min-width:120px;">Orar</span>
+                <div class="day-times" style="display:flex;gap:.5rem;flex:1;align-items:center;opacity:1;">
+                    <input type="time" name="override_start">
+                    <span class="muted" style="font-size:.8rem;flex-shrink:0">—</span>
+                    <input type="time" name="override_end">
+                </div>
+            </div>
+            <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+                <button class="btn btn-primary" id="override-submit-btn" type="submit">Salveaza exceptie</button>
+                <span class="muted" style="font-size:.85rem;">(se aplica doar datei selectate)</span>
+            </div>
+        </form>
+    </div>
+
+    {% if overrides %}
+    <div class="card-flush" style="margin-top:1rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:.5rem;">
+            <div class="section-label">Exceptii existente</div>
+        </div>
+        {% for override in overrides %}
+        <div class="day-row" style="align-items:center;gap:.75rem;">
+            <div style="flex:1;">
+                <div style="font-weight:600;">{{ override.date.strftime("%d.%m.%Y") }}</div>
+                <div class="muted" style="font-size:.85rem;">
+                    {% if override.is_active %}
+                        {{ override.start_time.strftime("%H:%M") }} — {{ override.end_time.strftime("%H:%M") }}
+                    {% else %}
+                        Zi libera
+                    {% endif %}
+                </div>
+            </div>
+            <form method="post" action="/admin/schedule/override/delete" style="margin:0;">
+                <input type="hidden" name="date" value="{{ override.date.isoformat() }}">
+                <input type="hidden" name="frizer_id" value="{{ selected_frizer.id if selected_frizer else '' }}">
+                <button type="submit" class="btn btn-danger" style="padding:.45rem .75rem;font-size:.8rem">Sterge</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block bottom_nav %}
+<nav class="bottom-nav">
+    <a href="/admin/dashboard" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        Programari
+    </a>
+    <a href="/admin/schedule" class="nav-item active">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+        </svg>
+        Orar
+    </a>    <a href="/admin/services" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+        </svg>
+        Servicii
+    </a>    <a href="/admin/frizers" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/><path d="M22 2l-1 4-4-1"/>
+            <path d="M22 2l-4 4"/>
+        </svg>
+        Frizeri
+    </a>    <a href="/" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Site
+    </a>
+</nav>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleDay(weekday, active) {
+    const times = document.getElementById('day-times-' + weekday);
+    times.style.opacity = active ? '1' : '.3';
+    times.querySelectorAll('input').forEach(inp => inp.disabled = !active);
+}
+
+function toggleOverrideType() {
+    const checkbox = document.getElementById('override-active-check');
+    const timesRow = document.getElementById('override-times-row');
+    const timeInputs = timesRow.querySelectorAll('input[type="time"]');
+    const submitBtn = document.getElementById('override-submit-btn');
+    
+    if (checkbox.checked) {
+        // Zi libera - ascunde ore, schimba buton in alb
+        timesRow.style.display = 'none';
+        timeInputs.forEach(inp => inp.disabled = true);
+        submitBtn.classList.add('btn-ghost');
+        submitBtn.classList.remove('btn-primary');
+        submitBtn.textContent = 'Salveaza zi libera';
+    } else {
+        // Orar special - arata ore, buton albastru
+        timesRow.style.display = 'flex';
+        timeInputs.forEach(inp => inp.disabled = false);
+        submitBtn.classList.remove('btn-ghost');
+        submitBtn.classList.add('btn-primary');
+        submitBtn.textContent = 'Salveaza orar special';
+    }
+}
+}
+
+function changeFrizer(frizer_id) {
+    document.getElementById('form-frizer-id').value = frizer_id;
+    document.getElementById('override-frizer-id').value = frizer_id;
+    // Reload page with selected frizer
+    window.location.href = `/admin/schedule/?frizer_id=${frizer_id}`;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleOverrideType();
+});
+</script>
+{% endblock %}

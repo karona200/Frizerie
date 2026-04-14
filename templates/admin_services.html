@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Servicii — {{ app_name }}{% endblock %}
+{% set page_class = "page-wide" %}
+
+{% block content %}
+<div class="page-wide">
+
+<h1 class="page-title" style="margin-top:.5rem">Servicii oferite</h1>
+
+{% if saved %}
+<div class="alert alert-success">Serviciile au fost salvate.</div>
+{% endif %}
+
+<!-- Frizer selector -->
+<div style="margin-bottom:1.5rem;padding:1rem;background:var(--bg2);border-radius:var(--radius-sm)">
+    <label style="display:block;margin-bottom:.5rem;font-weight:500">Selectia frizerul</label>
+    <select id="frizer-selector" style="margin-bottom:0" onchange="changeFrizer(this.value)">
+        {% for frizer in frizers %}
+        <option value="{{ frizer.id }}" {% if selected_frizer and selected_frizer.id == frizer.id %}selected{% endif %}>
+            {{ frizer.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+
+<p class="muted" style="font-size:.85rem;margin-bottom:1.25rem">
+    Configureaza serviciile oferite de fiecare frizer. Fiecare frizer isi poate defini propriile servicii cu preturi.
+</p>
+
+<!-- Add new service -->
+<div class="card-flush" style="margin-bottom:2rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:.5rem;">
+        <div class="section-label">Adauga serviciu nou</div>
+    </div>
+    
+    <form method="post" action="/admin/services/create">
+        <input type="hidden" name="frizer_id" value="{{ selected_frizer.id if selected_frizer else '' }}">
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr 100px;gap:1rem;align-items:end;margin-bottom:1rem;">
+            <div>
+                <label style="display:block;margin-bottom:.25rem;font-size:.85rem;font-weight:500">Nume serviciu</label>
+                <input type="text" name="name" placeholder="ex: Tuns" required style="width:100%">
+            </div>
+            <div>
+                <label style="display:block;margin-bottom:.25rem;font-size:.85rem;font-weight:500">Descriere (optional)</label>
+                <input type="text" name="description" placeholder="ex: Tuns complet cu masina" style="width:100%">
+            </div>
+            <div>
+                <label style="display:block;margin-bottom:.25rem;font-size:.85rem;font-weight:500">Pret (lei)</label>
+                <input type="number" name="price" placeholder="50" min="0" style="width:100%">
+            </div>
+        </div>
+        
+        <button class="btn btn-primary" type="submit">Adauga serviciu</button>
+    </form>
+</div>
+
+<!-- Existing services -->
+{% if services %}
+<div class="card-flush">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:.5rem;">
+        <div class="section-label">Servicii existente</div>
+    </div>
+    
+    {% for service in services %}
+    <div class="day-row" style="align-items:center;gap:.75rem;">
+        <div style="flex:1;">
+            <div style="font-weight:600;">{{ service.name }}</div>
+            {% if service.description %}
+            <div class="muted" style="font-size:.85rem;">{{ service.description }}</div>
+            {% endif %}
+            {% if service.price %}
+            <div style="font-size:.85rem;color:var(--success);font-weight:500;">{{ service.price }} lei</div>
+            {% endif %}
+        </div>
+        
+        <!-- Edit form -->
+        <form method="post" action="/admin/services/{{ service.id }}/update" style="flex:1;max-width:400px;">
+            <input type="hidden" name="frizer_id" value="{{ selected_frizer.id if selected_frizer else '' }}">
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:.5rem;align-items:center;">
+                <input type="text" name="name" value="{{ service.name }}" required style="font-size:.85rem;">
+                <input type="text" name="description" value="{{ service.description or '' }}" placeholder="Descriere" style="font-size:.85rem;">
+                <input type="number" name="price" value="{{ service.price or '' }}" placeholder="Pret" min="0" style="font-size:.85rem;">
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="padding:.35rem .6rem;font-size:.8rem;margin-top:.25rem;">Salveaza</button>
+        </form>
+        
+        <!-- Delete form -->
+        <form method="post" action="/admin/services/{{ service.id }}/delete" style="margin:0;">
+            <input type="hidden" name="frizer_id" value="{{ selected_frizer.id if selected_frizer else '' }}">
+            <button type="submit" class="btn btn-danger" style="padding:.45rem .75rem;font-size:.8rem"
+                    onclick="return confirm('Sigur vrei sa stergi acest serviciu?')">Sterge</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card-flush">
+    <div class="muted" style="text-align:center;padding:2rem;">
+        Niciun serviciu definit pentru acest frizer.
+    </div>
+</div>
+{% endif %}
+
+</div>
+
+{% endblock %}
+
+{% block bottom_nav %}
+<nav class="bottom-nav">
+    <a href="/admin/dashboard" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        Programari
+    </a>
+    <a href="/admin/schedule" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+        </svg>
+        Orar
+    </a>
+    <a href="/admin/services" class="nav-item active">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+        </svg>
+        Servicii
+    </a>
+    <a href="/admin/frizers" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/><path d="M22 2l-1 4-4-1"/>
+            <path d="M22 2l-4 4"/>
+        </svg>
+        Frizeri
+    </a>
+    <a href="/" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Site
+    </a>
+</nav>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function changeFrizer(frizer_id) {
+    // Reload page with selected frizer
+    window.location.href = `/admin/services/?frizer_id=${frizer_id}`;
+}
+</script>
+{% endblock %}

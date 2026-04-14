@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Orar — {{ app_name }}{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Orar de lucru</h1>
+
+<p class="muted" style="font-size:.85rem;margin-bottom:1.5rem">
+    Vezi programul de lucru al frizerilor nostri.
+</p>
+
+{% for schedule in frizer_schedules %}
+<div class="card" style="margin-bottom:1.5rem">
+    <h2 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem">{{ schedule.frizer.name }}</h2>
+    
+    {% if schedule.frizer.description %}
+    <p class="muted" style="font-size:.85rem;margin-bottom:1rem">{{ schedule.frizer.description }}</p>
+    {% endif %}
+
+    <div class="card-flush" style="margin-top:1rem">
+        {% for day in schedule.days %}
+        <div class="day-row" style="padding:.75rem 1rem;border-bottom:1px solid var(--border2)">
+            <span class="day-name" style="flex:1;font-weight:500;{{ 'color:var(--text2)' if day.weekday >= 5 else '' }}">
+                {{ day.day_name }}
+            </span>
+            <div class="day-times" style="opacity:{{ '1' if day.is_active else '.4' }}">
+                {% if day.is_active %}
+                    <span style="font-weight:500">{{ day.start_time.strftime('%H:%M') }} — {{ day.end_time.strftime('%H:%M') }}</span>
+                {% else %}
+                    <span class="muted">Închis</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if schedule.overrides %}
+    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border2)">
+        <h3 style="font-size:.9rem;font-weight:600;margin-bottom:.5rem;color:var(--text2)">Exceptii</h3>
+        {% for override in schedule.overrides %}
+        <div style="font-size:.85rem;margin-bottom:.25rem">
+            <span style="font-weight:500">{{ override.date.strftime('%d.%m.%Y') }}:</span>
+            {% if override.is_active %}
+                {{ override.start_time.strftime('%H:%M') }} — {{ override.end_time.strftime('%H:%M') }}
+            {% else %}
+                <span class="muted">Închis</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+
+<div style="text-align:center;margin-top:2rem">
+    <a href="/" class="btn btn-ghost">Înapoi la rezervare</a>
+</div>
+
+{% endblock %}

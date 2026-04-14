@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Admin — {{ app_name }}{% endblock %}
+{% block content %}
+
+<div style="padding-top:2rem">
+    <h1 class="page-title">Panou frizer</h1>
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/admin/">
+        <label>Parola</label>
+        <input type="password" name="password" placeholder="••••••••" autofocus required>
+        <button class="btn btn-primary btn-full" type="submit">Intra</button>
+    </form>
+</div>
+{% endblock %}
