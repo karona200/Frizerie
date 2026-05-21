@@ -34,7 +34,7 @@ def booking_page(request: Request, selected_date: str = "", frizer_id: int = Non
     if selected_date:
         try:
             d = date.fromisoformat(selected_date)
-            slots = SlotService(db).get_available_slots(d)
+            slots = SlotService(db).get_available_slots(d, frizer_id) if frizer_id else []
         except ValueError:
             pass
 
