@@ -130,7 +130,7 @@ body::before {
 <!-- Gallery carousel -->
 {% if gallery_photos %}
 <style>
-.gallery { margin: 0 -1rem 1.75rem; position: relative; }
+.gallery { margin: 0 -1rem 1.75rem; position: relative; overflow: hidden; }
 .gallery-viewport { overflow: hidden; border-radius: var(--radius); touch-action: pan-y; }
 .gallery-track {
     display: flex;
@@ -138,8 +138,8 @@ body::before {
     will-change: transform;
     user-select: none;
 }
-.gallery-slide { min-width: 100%; height: 270px; position: relative; flex-shrink: 0; }
-.gallery-slide img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; border-radius: var(--radius); }
+.gallery-slide { min-width: 100%; aspect-ratio: 4/3; max-height: 320px; position: relative; flex-shrink: 0; overflow: hidden; }
+.gallery-slide img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 .gallery-overlay {
     position: absolute; bottom: 0; left: 0; right: 0;
     padding: 2rem 1rem .9rem;
