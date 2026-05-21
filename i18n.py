@@ -3,8 +3,9 @@ import os
 from functools import lru_cache
 from fastapi import Request
 
-SUPPORTED = ["ro", "en", "de", "fr", "es", "it", "hu", "tr", "ru", "pl"]
-DEFAULT   = "ro"
+SUPPORTED       = ["ro", "en", "de", "fr", "es", "it", "hu", "tr", "ru", "pl"]
+ADMIN_SUPPORTED = ["ro", "en", "de", "tr"]
+DEFAULT         = "ro"
 
 
 @lru_cache(maxsize=None)
@@ -30,6 +31,15 @@ def detect_lang(request: Request) -> str:
 
 def get_t(request: Request) -> tuple[dict, str]:
     lang = detect_lang(request)
+    t = dict(_load(DEFAULT))
+    t.update(_load(lang))
+    return t, lang
+
+
+def get_admin_t(request: Request) -> tuple[dict, str]:
+    lang = detect_lang(request)
+    if lang not in ADMIN_SUPPORTED:
+        lang = DEFAULT
     t = dict(_load(DEFAULT))
     t.update(_load(lang))
     return t, lang

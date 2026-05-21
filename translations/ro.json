@@ -34,5 +34,21 @@
   "label_phone_conf": "Telefon",
   "btn_another": "Alta rezervare",
   "days": ["Duminica","Luni","Marti","Miercuri","Joi","Vineri","Sambata"],
-  "months": ["ian","feb","mar","apr","mai","iun","iul","aug","sep","oct","nov","dec"]
+  "months": ["ian","feb","mar","apr","mai","iun","iul","aug","sep","oct","nov","dec"],
+  "sched_title": "Orar de lucru",
+  "sched_saved": "Orarul a fost salvat.",
+  "sched_weekly": "Program saptamanal",
+  "sched_from": "De la",
+  "sched_to": "Pana la",
+  "sched_off": "Zi libera",
+  "sched_exceptions": "Exceptii",
+  "sched_exc_desc": "Orar diferit sau zi libera pentru o data anume, fara sa afecteze programul saptamanal.",
+  "sched_save_off": "Salveaza zi libera",
+  "sched_save_special": "Salveaza orar special",
+  "sched_saved_exc": "Exceptii salvate",
+  "sched_save": "Salveaza programul",
+  "sched_date": "Data",
+  "sched_type_off": "Zi libera",
+  "sched_type_special": "Orar special",
+  "days_short": ["Dum","Lun","Mar","Mie","Joi","Vin","Sam"]
 }

@@ -1,11 +1,55 @@
 {% extends "base.html" %}
-{% block title %}Orar — {{ app_name }}{% endblock %}
+{% block title %}{{ t.sched_title }} — {{ app_name }}{% endblock %}
+
+{% set flag_codes = {'ro':'ro','en':'gb','de':'de','tr':'tr'} %}
+
+{% block header_right %}
+<div style="position:relative" id="lang-picker">
+    <button type="button" id="lang-btn"
+            style="display:flex;align-items:center;gap:.35rem;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:.35rem .6rem;font-size:.82rem;font-family:inherit;cursor:pointer;white-space:nowrap;line-height:1">
+        <span class="fi fi-{{ flag_codes[lang] }}" style="border-radius:2px;width:1.2em;height:.9em;display:inline-block"></span>
+        <span>{{ lang | upper }}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div id="lang-menu" style="display:none;position:absolute;right:0;top:calc(100% + 5px);background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:0 6px 24px rgba(0,0,0,.13);z-index:200;min-width:120px;overflow:hidden">
+        {% for l in supported_langs %}
+        <a href="/set-lang/{{ l }}?next={{ request.url.path }}"
+           class="lang-opt{% if lang == l %} lang-opt-active{% endif %}">
+            <span class="fi fi-{{ flag_codes[l] }}" style="border-radius:2px;width:1.2em;height:.9em;display:inline-block;flex-shrink:0"></span>
+            {{ l | upper }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+<style>
+.lang-opt { display:flex;align-items:center;gap:.55rem;padding:.7rem .8rem;font-size:.83rem;color:var(--text);text-decoration:none;transition:background .12s;-webkit-tap-highlight-color:transparent }
+.lang-opt:hover,.lang-opt:active { background:var(--bg3) }
+.lang-opt-active { background:var(--accent-bg);font-weight:700 }
+</style>
+<script>
+(function() {
+    const picker = document.getElementById('lang-picker');
+    const btn    = document.getElementById('lang-btn');
+    const menu   = document.getElementById('lang-menu');
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        menu.style.display = menu.style.display !== 'none' ? 'none' : 'block';
+    });
+    document.addEventListener('click', function(e) {
+        if (!picker.contains(e.target)) menu.style.display = 'none';
+    });
+    document.addEventListener('touchstart', function(e) {
+        if (!picker.contains(e.target)) menu.style.display = 'none';
+    }, { passive: true });
+})();
+</script>
+{% endblock %}
 
 {% block content %}
-<h1 class="page-title" style="margin-top:.25rem">Orar de lucru</h1>
+<h1 class="page-title" style="margin-top:.25rem">{{ t.sched_title }}</h1>
 
 {% if saved %}
-<div class="alert alert-success">Orarul a fost salvat.</div>
+<div class="alert alert-success">{{ t.sched_saved }}</div>
 {% endif %}
 {% if errors %}
 {% for err in errors %}
@@ -27,16 +71,23 @@
 </div>
 {% endif %}
 
-<!-- Program saptamanal -->
-<p class="section-label">Program saptamanal</p>
+<!-- Weekly schedule -->
+<p class="section-label">{{ t.sched_weekly }}</p>
 <form method="post" action="/admin/schedule/update" id="schedule-form">
     <input type="hidden" name="frizer_id" id="form-frizer-id" value="{{ selected_frizer.id if selected_frizer else '' }}">
 
     <div class="card-flush" style="margin-bottom:1rem">
         {% for day in days %}
-        <div class="sch-row" id="day-row-{{ day.weekday }}">
+        <div class="sch-row {% if day.is_active %}sch-row-on{% endif %}" id="day-row-{{ day.weekday }}">
             <div class="sch-top">
-                <span class="sch-name {% if day.weekday >= 5 %}sch-weekend{% endif %}">{{ day.day_name }}</span>
+                <div style="display:flex;align-items:center;gap:.65rem">
+                    <span class="day-chip {% if day.weekday >= 5 %}day-chip-wk{% endif %}{% if not day.is_active %} day-chip-off{% endif %}" id="chip-{{ day.weekday }}">
+                        {{ day_abbr[day.weekday] }}
+                    </span>
+                    <span class="sch-name {% if day.weekday >= 5 %}sch-weekend{% endif %}">
+                        {{ day_names[day.weekday] }}
+                    </span>
+                </div>
                 <label class="toggle">
                     <input type="checkbox" name="active_{{ day.weekday }}"
                            {% if day.is_active %}checked{% endif %}
@@ -47,14 +98,14 @@
             <div class="sch-times" id="day-times-{{ day.weekday }}"
                  style="{% if not day.is_active %}display:none{% endif %}">
                 <div class="sch-time-group">
-                    <label class="sch-time-label">De la</label>
+                    <label class="sch-time-label">{{ t.sched_from }}</label>
                     <input type="time" name="start_{{ day.weekday }}"
                            value="{{ day.start_time.strftime('%H:%M') }}"
                            {% if not day.is_active %}disabled{% endif %}>
                 </div>
                 <div class="sch-time-sep">—</div>
                 <div class="sch-time-group">
-                    <label class="sch-time-label">Pana la</label>
+                    <label class="sch-time-label">{{ t.sched_to }}</label>
                     <input type="time" name="end_{{ day.weekday }}"
                            value="{{ day.end_time.strftime('%H:%M') }}"
                            {% if not day.is_active %}disabled{% endif %}>
@@ -62,7 +113,7 @@
             </div>
             <div class="sch-closed" id="day-closed-{{ day.weekday }}"
                  style="{% if day.is_active %}display:none{% endif %}">
-                Zi libera
+                <span class="badge badge-gray" style="font-size:.75rem">{{ t.sched_off }}</span>
             </div>
         </div>
         {% endfor %}
@@ -70,22 +121,20 @@
 
     <button class="btn btn-primary btn-full" type="submit">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" style="vertical-align:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Salveaza programul
+        {{ t.sched_save }}
     </button>
 </form>
 
-<!-- Exceptii -->
+<!-- Exceptions -->
 <div style="margin-top:2rem">
-    <p class="section-label">Exceptii pentru date specifice</p>
-    <p class="muted" style="font-size:.82rem;margin-bottom:1rem">
-        Orar diferit sau zi libera doar pentru o data anume, fara sa afecteze programul saptamanal.
-    </p>
+    <p class="section-label">{{ t.sched_exceptions }}</p>
+    <p class="muted" style="font-size:.82rem;margin-bottom:1rem">{{ t.sched_exc_desc }}</p>
 
     <div class="card" style="margin-bottom:1rem">
         <form method="post" action="/admin/schedule/override" id="override-form">
             <input type="hidden" name="frizer_id" id="override-frizer-id" value="{{ selected_frizer.id if selected_frizer else '' }}">
 
-            <label>Data</label>
+            <label>{{ t.sched_date }}</label>
             <input type="date" name="override_date" style="margin-bottom:1rem">
 
             <label class="sch-check-label">
@@ -94,41 +143,41 @@
                            onchange="toggleOverrideType()">
                     <span class="toggle-slider" style="border-radius:20px"></span>
                 </span>
-                <span id="override-type-label" style="font-size:.88rem;font-weight:600;color:var(--text)">Zi libera</span>
+                <span id="override-type-label" style="font-size:.88rem;font-weight:600;color:var(--text)">{{ t.sched_type_off }}</span>
             </label>
 
             <div id="override-times-row" style="display:none;margin-top:.85rem">
                 <div style="display:flex;gap:.75rem;align-items:flex-end">
                     <div style="flex:1">
-                        <label class="sch-time-label">De la</label>
+                        <label class="sch-time-label">{{ t.sched_from }}</label>
                         <input type="time" name="override_start" style="margin-bottom:0">
                     </div>
                     <div style="flex:1">
-                        <label class="sch-time-label">Pana la</label>
+                        <label class="sch-time-label">{{ t.sched_to }}</label>
                         <input type="time" name="override_end" style="margin-bottom:0">
                     </div>
                 </div>
             </div>
 
-            <button class="btn btn-primary btn-full" id="override-submit-btn" type="submit" style="margin-top:1rem">
-                Salveaza zi libera
+            <button class="btn btn-ghost btn-full" id="override-submit-btn" type="submit" style="margin-top:1rem">
+                {{ t.sched_save_off }}
             </button>
         </form>
     </div>
 
     {% if overrides %}
-    <p class="section-label" style="margin-top:1.5rem">Exceptii salvate</p>
+    <p class="section-label" style="margin-top:1.5rem">{{ t.sched_saved_exc }}</p>
     <div class="card-flush">
         {% for override in overrides %}
         <div class="sch-row" style="border-bottom:1px solid var(--border)">
             <div class="sch-top" style="padding:.85rem 1.1rem">
                 <div>
-                    <p style="font-weight:700;font-size:.9rem;margin:0 0 .15rem">{{ override.date.strftime("%d %b %Y") }}</p>
+                    <p style="font-weight:700;font-size:.9rem;margin:0 0 .2rem">{{ override.date.strftime("%d %b %Y") }}</p>
                     <p class="muted" style="font-size:.8rem;margin:0">
                         {% if override.is_active %}
                             {{ override.start_time.strftime("%H:%M") }} — {{ override.end_time.strftime("%H:%M") }}
                         {% else %}
-                            <span style="color:var(--danger)">Zi libera</span>
+                            <span class="badge badge-red" style="font-size:.72rem;padding:.15rem .5rem">{{ t.sched_off }}</span>
                         {% endif %}
                     </p>
                 </div>
@@ -136,8 +185,7 @@
                     <input type="hidden" name="date" value="{{ override.date.isoformat() }}">
                     <input type="hidden" name="frizer_id" value="{{ selected_frizer.id if selected_frizer else '' }}">
                     <button type="submit" class="btn btn-danger" style="padding:.4rem .7rem;font-size:.78rem">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                        Sterge
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                     </button>
                 </form>
             </div>
@@ -148,24 +196,37 @@
 </div>
 
 <style>
-.sch-row { border-bottom: 1px solid var(--border); }
+.sch-row { border-bottom: 1px solid var(--border); transition: border-color .15s; }
 .sch-row:last-child { border-bottom: none; }
+.sch-row-on { border-left: 3px solid var(--accent); }
 .sch-top {
     display: flex; align-items: center; justify-content: space-between;
-    padding: .9rem 1.1rem;
+    padding: .85rem 1.1rem .85rem .9rem;
     gap: 1rem;
 }
 .sch-name { font-weight: 600; font-size: .95rem; }
 .sch-weekend { color: var(--accent-dark); }
+
+/* Day abbreviation chip */
+.day-chip {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .68rem; font-weight: 800; letter-spacing: .03em;
+    background: var(--accent-bg); color: var(--accent-dark);
+    flex-shrink: 0; user-select: none;
+}
+.day-chip.day-chip-wk { background: rgba(168,116,76,.2); }
+.day-chip.day-chip-off { background: var(--bg3); color: var(--text3); }
+
 .sch-times {
     display: flex; align-items: center; gap: .5rem;
-    padding: 0 1.1rem .9rem;
+    padding: 0 1.1rem .85rem .9rem;
 }
 .sch-time-group { flex: 1; }
 .sch-time-label { font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text3); margin-bottom: .3rem; }
 .sch-time-group input { margin: 0; font-size: .95rem; padding: .6rem .75rem; }
 .sch-time-sep { color: var(--text3); font-size: .9rem; flex-shrink: 0; padding-top: 1.4rem; }
-.sch-closed { padding: 0 1.1rem .85rem; font-size: .82rem; color: var(--text3); font-style: italic; }
+.sch-closed { padding: 0 1.1rem .75rem .9rem; }
 .sch-check-label { display: flex; align-items: center; gap: .65rem; cursor: pointer; padding: .1rem 0; margin-bottom: 0; }
 </style>
 {% endblock %}
@@ -220,12 +281,23 @@
 
 {% block scripts %}
 <script>
+const I18N_SCHED = {
+    day_off:      {{ t.sched_type_off | tojson }},
+    special:      {{ t.sched_type_special | tojson }},
+    save_off:     {{ t.sched_save_off | tojson }},
+    save_special: {{ t.sched_save_special | tojson }},
+};
+
 function toggleDay(weekday, active) {
-    const times  = document.getElementById('day-times-' + weekday);
+    const times  = document.getElementById('day-times-'  + weekday);
     const closed = document.getElementById('day-closed-' + weekday);
+    const row    = document.getElementById('day-row-'    + weekday);
+    const chip   = document.getElementById('chip-'       + weekday);
     const inputs = times.querySelectorAll('input');
     times.style.display  = active ? 'flex'  : 'none';
     closed.style.display = active ? 'none'  : 'block';
+    row.classList.toggle('sch-row-on', active);
+    chip.classList.toggle('day-chip-off', !active);
     inputs.forEach(inp => inp.disabled = !active);
 }
 
@@ -240,12 +312,12 @@ function toggleOverrideType() {
     inputs.forEach(inp => inp.disabled = isOff);
 
     if (isOff) {
-        lbl.textContent = 'Zi libera';
-        btn.textContent = 'Salveaza zi libera';
+        lbl.textContent = I18N_SCHED.day_off;
+        btn.textContent = I18N_SCHED.save_off;
         btn.classList.replace('btn-primary', 'btn-ghost');
     } else {
-        lbl.textContent = 'Orar special';
-        btn.textContent = 'Salveaza orar special';
+        lbl.textContent = I18N_SCHED.special;
+        btn.textContent = I18N_SCHED.save_special;
         btn.classList.replace('btn-ghost', 'btn-primary');
     }
 }

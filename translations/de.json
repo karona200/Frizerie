@@ -34,5 +34,21 @@
   "label_phone_conf": "Telefon",
   "btn_another": "Weiteren Termin buchen",
   "days": ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"],
-  "months": ["Jan","Feb","Mar","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]
+  "months": ["Jan","Feb","Mar","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"],
+  "sched_title": "Arbeitszeiten",
+  "sched_saved": "Zeitplan gespeichert.",
+  "sched_weekly": "Wochenplan",
+  "sched_from": "Von",
+  "sched_to": "Bis",
+  "sched_off": "Freier Tag",
+  "sched_exceptions": "Ausnahmen",
+  "sched_exc_desc": "Andere Zeiten oder freier Tag fur ein bestimmtes Datum.",
+  "sched_save_off": "Freien Tag speichern",
+  "sched_save_special": "Sonderzeiten speichern",
+  "sched_saved_exc": "Gespeicherte Ausnahmen",
+  "sched_save": "Zeitplan speichern",
+  "sched_date": "Datum",
+  "sched_type_off": "Freier Tag",
+  "sched_type_special": "Sonderzeiten",
+  "days_short": ["So","Mo","Di","Mi","Do","Fr","Sa"]
 }

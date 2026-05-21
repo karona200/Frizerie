@@ -34,5 +34,21 @@
   "label_phone_conf": "Phone",
   "btn_another": "Book another",
   "days": ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
-  "months": ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+  "months": ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+  "sched_title": "Working Hours",
+  "sched_saved": "Schedule saved.",
+  "sched_weekly": "Weekly schedule",
+  "sched_from": "From",
+  "sched_to": "To",
+  "sched_off": "Day off",
+  "sched_exceptions": "Exceptions",
+  "sched_exc_desc": "Different hours or day off for a specific date, without affecting the weekly schedule.",
+  "sched_save_off": "Save day off",
+  "sched_save_special": "Save special hours",
+  "sched_saved_exc": "Saved exceptions",
+  "sched_save": "Save schedule",
+  "sched_date": "Date",
+  "sched_type_off": "Day off",
+  "sched_type_special": "Special hours",
+  "days_short": ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
 }

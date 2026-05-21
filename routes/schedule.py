@@ -6,39 +6,51 @@ from database import get_db
 from services.working_hours_service import WorkingHoursService
 from repositories.frizer_repository import FrizerRepository
 from config import config
+from i18n import get_admin_t, ADMIN_SUPPORTED
 
-# Admin routes
 admin_router = APIRouter(prefix="/admin/schedule", tags=["admin-schedule"])
-# Public routes  
 public_router = APIRouter(prefix="/schedule", tags=["public-schedule"])
 
 from templates_env import templates
 
 
-@admin_router.get("/", response_class=HTMLResponse)
-def schedule_page(request: Request, frizer_id: int = None, db: Session = Depends(get_db)):
-    frizer_repo = FrizerRepository(db)
-    frizers     = frizer_repo.get_all()
-    
-    # If no frizer selected, redirect to first frizer
-    if not frizer_id and frizers:
-        return RedirectResponse(url=f"/admin/schedule/?frizer_id={frizers[0].id}", status_code=303)
-    
-    service   = WorkingHoursService(db)
-    days      = service.get_all_for_frizer(frizer_id) if frizer_id else []
-    overrides = service.get_all_overrides(frizer_id) if frizer_id else []
-    
-    selected_frizer = frizer_repo.get_by_id(frizer_id) if frizer_id else None
-
-    return templates.TemplateResponse("admin_schedule.html", {
+def _sched_ctx(request, days, overrides, frizers, selected_frizer, **extra):
+    t, lang = get_admin_t(request)
+    day_names = {i: t["days"][(i + 1) % 7] for i in range(7)}
+    day_abbr  = {i: t.get("days_short", t["days"])[(i + 1) % 7] for i in range(7)}
+    ctx = {
         "request":         request,
         "app_name":        config.app_name,
         "days":            days,
         "overrides":       overrides,
         "frizers":         frizers,
         "selected_frizer": selected_frizer,
-        "saved":           request.query_params.get("saved", False),
-    })
+        "t":               t,
+        "lang":            lang,
+        "supported_langs": ADMIN_SUPPORTED,
+        "day_names":       day_names,
+        "day_abbr":        day_abbr,
+    }
+    ctx.update(extra)
+    return ctx
+
+
+@admin_router.get("/", response_class=HTMLResponse)
+def schedule_page(request: Request, frizer_id: int = None, db: Session = Depends(get_db)):
+    frizer_repo = FrizerRepository(db)
+    frizers     = frizer_repo.get_all()
+
+    if not frizer_id and frizers:
+        return RedirectResponse(url=f"/admin/schedule/?frizer_id={frizers[0].id}", status_code=303)
+
+    service   = WorkingHoursService(db)
+    days      = service.get_all_for_frizer(frizer_id) if frizer_id else []
+    overrides = service.get_all_overrides(frizer_id) if frizer_id else []
+    selected_frizer = frizer_repo.get_by_id(frizer_id) if frizer_id else None
+
+    return templates.TemplateResponse("admin_schedule.html",
+        _sched_ctx(request, days, overrides, frizers, selected_frizer,
+                   saved=request.query_params.get("saved", False)))
 
 
 @admin_router.post("/update", response_class=HTMLResponse)
@@ -56,11 +68,8 @@ async def update_schedule_post(
         end_str   = form.get(f"end_{weekday}",   "")
         is_active = f"active_{weekday}" in form
 
-        # Use default times when missing (happens when fields are disabled)
-        if not start_str:
-            start_str = "09:00"
-        if not end_str:
-            end_str = "17:00"
+        if not start_str: start_str = "09:00"
+        if not end_str:   end_str   = "17:00"
 
         try:
             start = datetime.strptime(start_str, "%H:%M").time()
@@ -70,21 +79,14 @@ async def update_schedule_post(
             errors.append(str(e))
 
     if errors:
-        days      = service.get_all_for_frizer(frizer_id)
-        overrides = service.get_all_overrides(frizer_id)
         frizer_repo = FrizerRepository(db)
-        selected_frizer = frizer_repo.get_by_id(frizer_id)
-        frizers = frizer_repo.get_all()
-        
-        return templates.TemplateResponse("admin_schedule.html", {
-            "request":         request,
-            "app_name":        config.app_name,
-            "days":            days,
-            "overrides":       overrides,
-            "frizers":         frizers,
-            "selected_frizer": selected_frizer,
-            "errors":          errors,
-        }, status_code=400)
+        return templates.TemplateResponse("admin_schedule.html",
+            _sched_ctx(request,
+                       service.get_all_for_frizer(frizer_id),
+                       service.get_all_overrides(frizer_id),
+                       frizer_repo.get_all(),
+                       frizer_repo.get_by_id(frizer_id),
+                       errors=errors), status_code=400)
 
     return RedirectResponse(url=f"/admin/schedule/?frizer_id={frizer_id}&saved=1", status_code=303)
 
@@ -102,38 +104,30 @@ async def override_schedule_post(
     date_str   = form.get("override_date", "")
     start_str  = form.get("override_start", "")
     end_str    = form.get("override_end", "")
-    is_day_off = "override_active" in form  # Checkbox checked = zi libera
+    is_day_off = "override_active" in form
 
     if not date_str:
         errors.append("Trebuie selectata o data pentru setarea exceptionala.")
 
-    # Daca NU e zi libera, trebuie sa aiba ore
     if not is_day_off:
         if not start_str or not end_str:
             errors.append("Trebuie completate ambele ore de inceput si sfarsit pentru orar special.")
-        is_active = True  # Orar special activ
+        is_active = True
     else:
-        # Zi libera - nu necesita ore, ziua e complet libera
         is_active = False
-        start_str = "00:00"  # Valori default, dar nu conteaza
-        end_str = "23:59"
+        start_str = "00:00"
+        end_str   = "23:59"
+
+    frizer_repo = FrizerRepository(db)
 
     if errors:
-        days      = service.get_all_for_frizer(frizer_id)
-        overrides = service.get_all_overrides(frizer_id)
-        frizer_repo = FrizerRepository(db)
-        selected_frizer = frizer_repo.get_by_id(frizer_id)
-        frizers = frizer_repo.get_all()
-        
-        return templates.TemplateResponse("admin_schedule.html", {
-            "request":         request,
-            "app_name":        config.app_name,
-            "days":            days,
-            "overrides":       overrides,
-            "frizers":         frizers,
-            "selected_frizer": selected_frizer,
-            "errors":          errors,
-        }, status_code=400)
+        return templates.TemplateResponse("admin_schedule.html",
+            _sched_ctx(request,
+                       service.get_all_for_frizer(frizer_id),
+                       service.get_all_overrides(frizer_id),
+                       frizer_repo.get_all(),
+                       frizer_repo.get_by_id(frizer_id),
+                       errors=errors), status_code=400)
 
     try:
         target_date = date.fromisoformat(date_str)
@@ -141,22 +135,14 @@ async def override_schedule_post(
         end   = datetime.strptime(end_str,   "%H:%M").time()
         service.update_override(target_date, start, end, is_active, frizer_id)
     except ValueError as e:
-        days      = service.get_all_for_frizer(frizer_id)
-        overrides = service.get_all_overrides(frizer_id)
-        frizer_repo = FrizerRepository(db)
-        selected_frizer = frizer_repo.get_by_id(frizer_id)
-        frizers = frizer_repo.get_all()
-        
         errors.append(str(e))
-        return templates.TemplateResponse("admin_schedule.html", {
-            "request":         request,
-            "app_name":        config.app_name,
-            "days":            days,
-            "overrides":       overrides,
-            "frizers":         frizers,
-            "selected_frizer": selected_frizer,
-            "errors":          errors,
-        }, status_code=400)
+        return templates.TemplateResponse("admin_schedule.html",
+            _sched_ctx(request,
+                       service.get_all_for_frizer(frizer_id),
+                       service.get_all_overrides(frizer_id),
+                       frizer_repo.get_all(),
+                       frizer_repo.get_by_id(frizer_id),
+                       errors=errors), status_code=400)
 
     return RedirectResponse(url=f"/admin/schedule/?frizer_id={frizer_id}&saved=1", status_code=303)
 
@@ -182,10 +168,10 @@ async def delete_override_post(
 def public_schedule_page(request: Request, db: Session = Depends(get_db)):
     frizer_repo = FrizerRepository(db)
     frizers = frizer_repo.get_all()
-    
+
     frizer_schedules = []
     service = WorkingHoursService(db)
-    
+
     for frizer in frizers:
         days = service.get_all_for_frizer(frizer.id)
         overrides = service.get_all_overrides(frizer.id)
@@ -194,7 +180,7 @@ def public_schedule_page(request: Request, db: Session = Depends(get_db)):
             "days": days,
             "overrides": overrides
         })
-    
+
     return templates.TemplateResponse("public_schedule.html", {
         "request": request,
         "app_name": config.app_name,

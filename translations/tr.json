@@ -34,5 +34,21 @@
   "label_phone_conf": "Telefon",
   "btn_another": "Yeni rezervasyon",
   "days": ["Pazar","Pazartesi","Sali","Carsamba","Persembe","Cuma","Cumartesi"],
-  "months": ["Oca","Sub","Mar","Nis","May","Haz","Tem","Agu","Eyl","Eki","Kas","Ara"]
+  "months": ["Oca","Sub","Mar","Nis","May","Haz","Tem","Agu","Eyl","Eki","Kas","Ara"],
+  "sched_title": "Calisma Saatleri",
+  "sched_saved": "Program kaydedildi.",
+  "sched_weekly": "Haftalik program",
+  "sched_from": "Baslangic",
+  "sched_to": "Bitis",
+  "sched_off": "Tatil gunu",
+  "sched_exceptions": "Istisnalar",
+  "sched_exc_desc": "Haftalik programi etkilemeden belirli bir tarih icin farkli saatler.",
+  "sched_save_off": "Tatil gununu kaydet",
+  "sched_save_special": "Ozel saatleri kaydet",
+  "sched_saved_exc": "Kaydedilen istisnalar",
+  "sched_save": "Programi kaydet",
+  "sched_date": "Tarih",
+  "sched_type_off": "Tatil gunu",
+  "sched_type_special": "Ozel saatler",
+  "days_short": ["Paz","Pzt","Sal","Car","Per","Cum","Cmt"]
 }
