@@ -1,52 +1,129 @@
 {% extends "base.html" %}
 {% block title %}Frizeri — {{ app_name }}{% endblock %}
-{% set page_class = "page-wide" %}
 
 {% block header_right %}
-<a href="/admin/frizers/new" class="btn btn-primary" style="padding:.5rem 1rem;font-size:.85rem">+ Adauga frizer</a>
+<a href="/admin/frizers/new" class="btn btn-primary" style="padding:.45rem .9rem;font-size:.82rem;gap:.3rem">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Adauga
+</a>
 {% endblock %}
 
 {% block content %}
-<div class="page-wide">
-
 <h1 class="page-title">Frizeri</h1>
 
 {% if frizers %}
-<div class="frizers-grid">
+<div class="fz-grid">
     {% for frizer in frizers %}
-    <div class="frizer-card">
-        <div class="frizer-card-image">
+    <div class="fz-card">
+        <div class="fz-photo">
             {% if frizer.image_path %}
             <img src="{{ frizer.image_path }}" alt="{{ frizer.name }}">
             {% else %}
-            <div class="frizer-image-placeholder">✂</div>
+            <div class="fz-placeholder">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+                    <line x1="19" y1="8" x2="23" y2="12"/><line x1="23" y1="8" x2="19" y2="12"/>
+                </svg>
+            </div>
             {% endif %}
         </div>
-        <div class="frizer-card-body">
-            <h3 class="frizer-card-name">{{ frizer.name }}</h3>
+        <div class="fz-body">
+            <p class="fz-name">{{ frizer.name }}</p>
             {% if frizer.description %}
-            <p class="frizer-card-desc">{{ frizer.description }}</p>
+            <p class="fz-desc">{{ frizer.description }}</p>
             {% endif %}
-        </div>
-        <div class="frizer-card-actions">
-            <a href="/admin/frizers/{{ frizer.id }}/edit" class="btn btn-primary" style="flex:1;font-size:.8rem;padding:.5rem">Editare</a>
-            <form method="post" action="/admin/frizers/{{ frizer.id }}/delete" style="margin:0;flex:1"
-                  onsubmit="return confirm('Stergi frizerul {{ frizer.name }}?')">
-                <button type="submit" class="btn btn-danger" style="width:100%;font-size:.8rem;padding:.5rem">Sterge</button>
-            </form>
+            <div class="fz-actions">
+                <a href="/admin/frizers/{{ frizer.id }}/edit" class="btn btn-ghost fz-btn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Editare
+                </a>
+                <form method="post" action="/admin/frizers/{{ frizer.id }}/delete" style="margin:0"
+                      onsubmit="return confirm('Stergi frizerul {{ frizer.name }}?')">
+                    <button type="submit" class="btn btn-danger fz-btn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                        Sterge
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
     {% endfor %}
 </div>
 {% else %}
 <div style="text-align:center;padding:4rem 1rem;color:var(--text3)">
-    <div style="font-size:2.5rem;margin-bottom:.75rem">✂</div>
-    <p style="font-weight:500">Niciun frizer</p>
-    <p style="font-size:.85rem;margin-top:.3rem">Adauga primul frizer pentru a putea fi selectat la rezervare.</p>
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" style="margin:0 auto .85rem;display:block;opacity:.5">
+        <circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+    </svg>
+    <p style="font-weight:600;margin-bottom:.3rem">Niciun frizer adaugat</p>
+    <p style="font-size:.85rem">Adauga primul frizer pentru a putea fi selectat la rezervare.</p>
 </div>
 {% endif %}
 
-</div>
+<style>
+.fz-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: .85rem;
+}
+@media (min-width: 500px) {
+    .fz-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.fz-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--sh-sm);
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow .18s, border-color .18s;
+}
+.fz-card:hover { border-color: var(--border2); box-shadow: var(--sh); }
+.fz-photo {
+    width: 100%;
+    aspect-ratio: 3/4;
+    background: var(--bg3);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.fz-photo img {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: top center;
+    display: block;
+    transition: transform .3s;
+}
+.fz-card:hover .fz-photo img { transform: scale(1.03); }
+.fz-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text3);
+}
+.fz-body {
+    padding: .7rem .75rem .75rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+.fz-name {
+    font-weight: 700; font-size: .92rem;
+    margin: 0 0 .2rem; letter-spacing: -.1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fz-desc {
+    font-size: .75rem; color: var(--text2);
+    margin: 0 0 .65rem; line-height: 1.35;
+    overflow: hidden; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    flex: 1;
+}
+.fz-actions {
+    display: flex; gap: .4rem; margin-top: auto;
+}
+.fz-btn {
+    flex: 1; font-size: .75rem;
+    padding: .45rem .5rem; gap: .3rem;
+}
+</style>
 {% endblock %}
 
 {% block bottom_nav %}
@@ -60,15 +137,14 @@
     </a>
     <a href="/admin/schedule" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-            <circle cx="12" y="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+            <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
         </svg>
         Orar
     </a>
     <a href="/admin/frizers" class="nav-item active">
         <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/><path d="M22 2l-1 4-4-1"/>
-            <path d="M22 2l-4 4"/>
+            <circle cx="9" cy="7" r="4"/>
         </svg>
         Frizeri
     </a>
@@ -89,87 +165,3 @@
     </a>
 </nav>
 {% endblock %}
-
-<style>
-.frizers-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.frizer-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: all .15s;
-}
-
-.frizer-card:hover {
-    border-color: var(--text2);
-    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.08);
-}
-
-.frizer-card-image {
-    width: 100%;
-    height: 140px;
-    background: var(--bg3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.frizer-card-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.frizer-image-placeholder {
-    font-size: 2.5rem;
-    color: var(--text3);
-}
-
-.frizer-card-body {
-    padding: .75rem;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.frizer-card-name {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0 0 .4rem 0;
-    word-break: break-word;
-}
-
-.frizer-card-desc {
-    font-size: .75rem;
-    color: var(--text2);
-    margin: 0;
-    line-height: 1.3;
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-}
-
-.frizer-card-actions {
-    display: flex;
-    gap: .5rem;
-    padding: .75rem;
-    border-top: 1px solid var(--border);
-}
-
-.frizer-card-actions form {
-    flex: 1;
-}
-</style></content>
-<parameter name="filePath">c:\Users\cucul\Downloads\barber-app\templates\admin_frizers.html
