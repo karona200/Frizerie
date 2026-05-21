@@ -90,7 +90,7 @@ def create_booking(
         )
         appointment = AppointmentService(db).create(data)
     except ValueError as e:
-        slots = SlotService(db).get_available_slots(date.fromisoformat(date_str))
+        slots = SlotService(db).get_available_slots(date.fromisoformat(date_str), frizer_id)
         frizers = FrizerRepository(db).get_all()
         services = ServiceService(db).get_all_for_frizer(frizer_id) if frizer_id else []
         return templates.TemplateResponse("book.html", {
