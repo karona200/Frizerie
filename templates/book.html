@@ -67,7 +67,7 @@ body::before {
     z-index: 0;
     pointer-events: none;
 }
-.header, .page, .bottom-nav, .page-wide { position: relative; z-index: 1; }
+.page, .bottom-nav, .page-wide { position: relative; z-index: 1; }
 </style>
 {% endif %}
 
@@ -137,7 +137,7 @@ body::before {
 <!-- Gallery carousel -->
 {% if gallery_photos %}
 <style>
-.gallery { margin: 0 -1rem 1.75rem; position: relative; overflow: hidden; }
+.gallery { margin: 0 -1rem 1.75rem; position: relative; }
 .gallery-viewport { overflow: hidden; border-radius: var(--radius); touch-action: pan-y; }
 .gallery-track {
     display: flex;
@@ -145,8 +145,8 @@ body::before {
     will-change: transform;
     user-select: none;
 }
-.gallery-slide { min-width: 100%; aspect-ratio: 4/3; max-height: 320px; position: relative; flex-shrink: 0; overflow: hidden; }
-.gallery-slide img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.gallery-slide { min-width: 100%; height: 270px; position: relative; flex-shrink: 0; }
+.gallery-slide img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; border-radius: var(--radius); }
 .gallery-overlay {
     position: absolute; bottom: 0; left: 0; right: 0;
     padding: 2rem 1rem .9rem;
