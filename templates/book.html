@@ -145,7 +145,7 @@ body::before {
     will-change: transform;
     user-select: none;
 }
-.gallery-slide { min-width: 100%; height: 270px; position: relative; flex-shrink: 0; }
+.gallery-slide { flex: 0 0 100%; width: 100%; height: 270px; position: relative; }
 .gallery-slide img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; border-radius: var(--radius); }
 .gallery-overlay {
     position: absolute; bottom: 0; left: 0; right: 0;
@@ -643,10 +643,12 @@ document.getElementById('booking-form')?.addEventListener('submit', () => {
         dotBox.appendChild(d);
     }
 
+    function sw() { return viewport.offsetWidth; }
+
     function go(n, animate = true) {
         cur = ((n % total) + total) % total;
         if (!animate) track.style.transition = 'none';
-        track.style.transform = `translateX(-${cur * 100}%)`;
+        track.style.transform = `translateX(${-cur * sw()}px)`;
         if (!animate) requestAnimationFrame(() => { track.style.transition = ''; });
         dotBox.querySelectorAll('.gdot').forEach((d, i) => d.classList.toggle('active', i === cur));
     }
@@ -656,6 +658,8 @@ document.getElementById('booking-form')?.addEventListener('submit', () => {
         autoTimer = setInterval(() => go(cur + 1), 4500);
     }
 
+    window.addEventListener('resize', () => go(cur, false));
+
     viewport.addEventListener('touchstart', e => {
         startX = e.touches[0].clientX; dragging = true; dragDelta = 0;
         track.style.transition = 'none'; clearInterval(autoTimer);
@@ -663,7 +667,7 @@ document.getElementById('booking-form')?.addEventListener('submit', () => {
     viewport.addEventListener('touchmove', e => {
         if (!dragging) return;
         dragDelta = e.touches[0].clientX - startX;
-        track.style.transform = `translateX(calc(-${cur * 100}% + ${dragDelta}px))`;
+        track.style.transform = `translateX(${-cur * sw() + dragDelta}px)`;
     }, { passive: true });
     viewport.addEventListener('touchend', () => {
         track.style.transition = '';
@@ -678,7 +682,7 @@ document.getElementById('booking-form')?.addEventListener('submit', () => {
     document.addEventListener('mousemove', e => {
         if (!dragging) return;
         dragDelta = e.clientX - startX;
-        track.style.transform = `translateX(calc(-${cur * 100}% + ${dragDelta}px))`;
+        track.style.transform = `translateX(${-cur * sw() + dragDelta}px)`;
     });
     document.addEventListener('mouseup', () => {
         if (!dragging) return;
