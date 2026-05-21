@@ -1,37 +1,192 @@
 {% extends "base.html" %}
-{% block title %}Rezervare — {{ app_name }}{% endblock %}
+{% block title %}{{ t.book_page_title }} — {{ app_name }}{% endblock %}
 
+{% set flag_codes = {'ro':'ro','en':'gb','de':'de','fr':'fr','es':'es','it':'it','hu':'hu','tr':'tr','ru':'ru','pl':'pl'} %}
 {% block header_right %}
-<a href="/schedule" style="color:var(--text2);text-decoration:none;font-size:.9rem;padding:.5rem;border-radius:var(--radius-sm);background:var(--bg3);transition:all .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">
-    Vezi orar
-</a>
+<div style="display:flex;align-items:center;gap:.5rem">
+    <a href="/schedule" class="btn btn-ghost" style="padding:.4rem .85rem;font-size:.82rem">{{ t.nav_schedule }}</a>
+
+    <!-- Language picker -->
+    <div style="position:relative" id="lang-picker">
+        <button type="button" id="lang-btn"
+                style="display:flex;align-items:center;gap:.35rem;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:.35rem .6rem;font-size:.82rem;font-family:inherit;cursor:pointer;white-space:nowrap;line-height:1">
+            <span class="fi fi-{{ flag_codes[lang] }}" style="border-radius:2px;width:1.2em;height:.9em;display:inline-block"></span>
+            <span>{{ lang | upper }}</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="lang-menu" style="display:none;position:absolute;right:0;top:calc(100% + 5px);background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:0 6px 24px rgba(0,0,0,.13);z-index:200;min-width:120px;overflow:hidden">
+            {% for l in supported_langs %}
+            <a href="/set-lang/{{ l }}?next={{ request.url.path }}"
+               class="lang-opt{% if lang == l %} lang-opt-active{% endif %}">
+                <span class="fi fi-{{ flag_codes[l] }}" style="border-radius:2px;width:1.2em;height:.9em;display:inline-block;flex-shrink:0"></span>
+                {{ l | upper }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+<style>
+.lang-opt { display:flex;align-items:center;gap:.55rem;padding:.52rem .8rem;font-size:.83rem;color:var(--text);text-decoration:none;transition:background .12s }
+.lang-opt:hover { background:var(--bg3) }
+.lang-opt-active { background:var(--accent-bg);font-weight:700 }
+</style>
+<script>
+(function() {
+    const btn  = document.getElementById('lang-btn');
+    const menu = document.getElementById('lang-menu');
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    });
+    document.addEventListener('click', function() { menu.style.display = 'none'; });
+})();
+</script>
 {% endblock %}
 
 {% block content %}
-<h1 class="page-title">Rezerva</h1>
+{% if bg_photo %}
+<style>
+body {
+    background-image: url('{{ bg_photo.file_path }}');
+    background-size: cover;
+    background-position: center top;
+    background-attachment: fixed;
+}
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(248,244,240,.84);
+    z-index: 0;
+    pointer-events: none;
+}
+.header, .page, .bottom-nav, .page-wide { position: relative; z-index: 1; }
+</style>
+{% endif %}
+
+<div class="shimmer-wrap" style="margin-bottom:1.5rem;margin-top:.25rem">
+    <span class="shimmer-text" style="font-size:1.6rem;letter-spacing:-.5px">{{ t.book_heading }}</span>
+</div>
 
 {% if error %}
 <div class="alert alert-error">{{ error }}</div>
 {% endif %}
 <style>
-.frizer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-.frizer-card { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 1rem; cursor: pointer; transition: all .15s; text-align: center; }
-.frizer-card:hover { border-color: #555; background: #222; }
-.frizer-card.selected { background: var(--text); color: #000; border-color: var(--text); }
-.frizer-image { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin: 0 auto .75rem; display: block; background: var(--bg2); border: 2px solid var(--border); }
-.frizer-info h3 { font-size: 1rem; font-weight: 600; margin-bottom: .25rem; }
-.frizer-info p { font-size: .8rem; color: var(--text2); line-height: 1.3; }
-.frizer-card.selected .frizer-info p { color: rgba(0,0,0,.7); }
-.service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-.service-card { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 1rem; cursor: pointer; transition: all .15s; }
-.service-card:hover { border-color: #555; background: #222; }
-.service-card.selected { background: var(--text); color: #000; border-color: var(--text); }
-.service-info h3 { font-size: 1rem; font-weight: 600; margin-bottom: .25rem; }
-.service-info p { font-size: .85rem; color: var(--text2); line-height: 1.3; margin-bottom: .5rem; }
-.service-card.selected .service-info p { color: rgba(0,0,0,.7); }
-.service-price { font-weight: 600; color: var(--accent); margin-top: .5rem; }
-.service-card.selected .service-price { color: rgba(0,0,0,.8); }
+.frizer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .85rem; margin-bottom: 1rem; }
+.frizer-card { background: var(--bg2); border: 1.5px solid var(--border2); border-radius: var(--radius); padding: 1.1rem; cursor: pointer; transition: all .18s; text-align: center; box-shadow: var(--sh-sm); }
+.frizer-card:hover { border-color: var(--accent); background: var(--accent-bg); }
+.frizer-card.selected { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 4px 18px rgba(200,149,108,.35); }
+.frizer-image { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin: 0 auto .75rem; display: block; background: var(--bg3); border: 2px solid var(--border); }
+.frizer-info h3 { font-size: .95rem; font-weight: 700; margin-bottom: .2rem; }
+.frizer-info p { font-size: .78rem; color: var(--text2); line-height: 1.3; }
+.frizer-card.selected .frizer-info p { color: rgba(255,255,255,.75); }
+.service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .85rem; margin-bottom: 1rem; }
+.service-card { background: var(--bg2); border: 1.5px solid var(--border2); border-radius: var(--radius); padding: 1.1rem; cursor: pointer; transition: all .18s; box-shadow: var(--sh-sm); }
+.service-card:hover { border-color: var(--accent); background: var(--accent-bg); }
+.service-card.selected { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 4px 18px rgba(200,149,108,.35); }
+.service-info h3 { font-size: .95rem; font-weight: 700; margin-bottom: .2rem; }
+.service-info p { font-size: .82rem; color: var(--text2); line-height: 1.3; margin-bottom: .4rem; }
+.service-card.selected .service-info p { color: rgba(255,255,255,.75); }
+.service-price { font-weight: 700; color: var(--accent-dark); margin-top: .4rem; font-size: .9rem; }
+.service-card.selected .service-price { color: rgba(255,255,255,.9); }
+.step-back-btn {
+    width: 36px; height: 36px; flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--bg2);
+    border: 1.5px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text2);
+    box-shadow: var(--sh-sm);
+    transition: border-color .15s, color .15s;
+}
+.step-back-btn:hover { border-color: var(--accent); color: var(--accent); }
+.step-breadcrumb {
+    flex: 1; min-width: 0;
+    background: var(--bg2);
+    border: 1.5px solid var(--border2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: .45rem .9rem;
+    box-shadow: var(--sh-sm);
+}
+.cal-wrap { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:1rem 1rem .75rem; margin-bottom:1rem; box-shadow:var(--sh-sm); }
+.cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:.85rem; }
+.cal-title { font-weight:700; font-size:1rem; letter-spacing:-.2px; color:var(--text); }
+.cal-nav { width:32px; height:32px; border-radius:50%; background:var(--bg3); border:1px solid var(--border2); color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s,color .15s,border-color .15s; padding:0; flex-shrink:0; }
+.cal-nav:hover { background:var(--accent-bg); color:var(--accent); border-color:rgba(200,149,108,.28); }
+.cal-dow { display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:.4rem; }
+.cal-dow span { text-align:center; font-size:.68rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text3); padding:.2rem 0; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:.88rem; font-weight:600; cursor:pointer; transition:background .15s,color .15s,border-color .15s,box-shadow .15s; color:var(--text); border:1.5px solid transparent; user-select:none; }
+.cal-day:hover:not(.cal-off):not(.cal-past):not(.cal-empty) { background:var(--accent-bg); color:var(--accent-dark); border-color:rgba(200,149,108,.28); }
+.cal-today { border-color:var(--accent) !important; color:var(--accent-dark); font-weight:700; }
+.cal-selected { background:var(--accent) !important; color:#fff !important; border-color:var(--accent) !important; box-shadow:0 2px 10px rgba(200,149,108,.35); }
+.cal-selected.cal-today { color:#fff !important; }
+.cal-off { color:var(--text3); cursor:default; opacity:.38; }
+.cal-past { color:var(--border2); cursor:default; pointer-events:none; }
+.cal-empty { pointer-events:none; }
 </style>
+
+<!-- Gallery carousel -->
+{% if gallery_photos %}
+<style>
+.gallery { margin: 0 -1rem 1.75rem; position: relative; }
+.gallery-viewport { overflow: hidden; border-radius: var(--radius); touch-action: pan-y; }
+.gallery-track {
+    display: flex;
+    transition: transform .38s cubic-bezier(.4,0,.2,1);
+    will-change: transform;
+    user-select: none;
+}
+.gallery-slide { min-width: 100%; height: 270px; position: relative; flex-shrink: 0; }
+.gallery-slide img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; border-radius: var(--radius); }
+.gallery-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 2rem 1rem .9rem;
+    background: linear-gradient(to top, rgba(0,0,0,.58) 0%, transparent 100%);
+    border-radius: 0 0 var(--radius) var(--radius);
+    display: flex; flex-direction: column; align-items: flex-start; gap: .5rem;
+}
+.gallery-cap { color: #fff; font-size: .88rem; font-weight: 600; letter-spacing: -.1px; }
+.gallery-cta {
+    display: inline-flex; align-items: center; gap: .35rem;
+    background: var(--accent); color: #fff;
+    padding: .5rem 1.1rem; border-radius: var(--radius-sm);
+    font-weight: 700; font-size: .85rem; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,.25); transition: background .15s;
+    border: none; cursor: pointer; font-family: inherit;
+}
+.gallery-dots { display: flex; justify-content: center; gap: .45rem; padding-top: .7rem; }
+.gdot {
+    width: 6px; height: 6px; border-radius: 3px;
+    background: var(--border2); border: none; cursor: pointer; padding: 0;
+    transition: all .28s cubic-bezier(.4,0,.2,1); flex-shrink: 0;
+}
+.gdot.active { background: var(--accent); width: 20px; }
+</style>
+<div class="gallery" id="gallery">
+    <div class="gallery-viewport" id="gallery-viewport">
+        <div class="gallery-track" id="gallery-track">
+            {% for photo in gallery_photos %}
+            <div class="gallery-slide">
+                <img src="{{ photo.file_path }}" alt="{{ photo.caption or app_name }}">
+                <div class="gallery-overlay">
+                    {% if photo.caption %}<span class="gallery-cap">{{ photo.caption }}</span>{% endif %}
+                    <button class="gallery-cta" onclick="document.getElementById('step-1').scrollIntoView({behavior:'smooth'})">
+                        {{ t.cta_book }}
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% if gallery_photos|length > 1 %}
+    <div class="gallery-dots" id="gallery-dots"></div>
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Step indicators -->
 <div class="steps">
     <div class="step-dot active" id="dot-1"></div>
@@ -43,7 +198,7 @@
 
 <!-- Step 1: Frizer -->
 <div id="step-1">
-    <p class="section-label">Alege frizerul</p>
+    <p class="section-label">{{ t.step1_label }}</p>
     <div class="frizer-grid" id="frizer-grid">
         {% for frizer in frizers %}
         <div class="frizer-card" onclick="selectFrizer({{ frizer.id }}, '{{ frizer.name }}', this)">
@@ -61,104 +216,110 @@
     </div>
     <input type="hidden" id="selected-frizer" value="">
     <button class="btn btn-primary btn-full" onclick="goToStep2()" id="btn-step2-from-1"
-            disabled style="opacity:.35;margin-top:.5rem">Continua</button>
+            disabled style="opacity:.35;margin-top:.5rem">{{ t.btn_continue }}</button>
 </div>
 
 <!-- Step 1.5: Service -->
 <div id="step-1-5" style="display:none">
-    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
-        <button onclick="goToStep(1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.2rem;padding:.25rem">←</button>
-        <div>
-            <p class="section-label" style="margin:0">Frizer selectat</p>
-            <p style="font-weight:600;font-size:.95rem" id="frizer-display-step1-5"></p>
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1.25rem">
+        <button onclick="goToStep(1)" class="step-back-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="step-breadcrumb">
+            <p class="section-label" style="margin:0 0 .05rem">{{ t.breadcrumb_frizer }}</p>
+            <p style="font-weight:700;font-size:.92rem;color:var(--text);margin:0" id="frizer-display-step1-5"></p>
         </div>
     </div>
-
-    <p class="section-label">Alege serviciul</p>
-    <div id="services-loading" style="color:var(--text2);font-size:.9rem;padding:1rem 0">Se incarca serviciile...</div>
+    <p class="section-label">{{ t.step_service_label }}</p>
+    <div id="services-loading" style="color:var(--text2);font-size:.9rem;padding:1rem 0">{{ t.loading_services }}</div>
     <div class="service-grid" id="service-grid" style="display:none">
         {% for service in services %}
         <div class="service-card" onclick="selectService({{ service.id }}, '{{ service.name }}', {{ service.price or 'null' }}, this)">
             <div class="service-info">
                 <h3>{{ service.name }}</h3>
-                {% if service.description %}
-                <p>{{ service.description }}</p>
-                {% endif %}
-                {% if service.price %}
-                <p class="service-price">{{ service.price }} lei</p>
-                {% endif %}
+                {% if service.description %}<p>{{ service.description }}</p>{% endif %}
+                {% if service.price %}<p class="service-price">{{ service.price }} lei</p>{% endif %}
             </div>
         </div>
         {% endfor %}
     </div>
     <input type="hidden" id="selected-service" value="">
     <button class="btn btn-primary btn-full" onclick="goToStep2FromService()" id="btn-step2-from-1-5"
-            disabled style="opacity:.35;margin-top:.5rem">Continua</button>
+            disabled style="opacity:.35;margin-top:.5rem">{{ t.btn_continue }}</button>
 </div>
 
 <!-- Step 2: Data -->
 <div id="step-2" style="display:none">
-    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
-        <button onclick="goToStep(1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.2rem;padding:.25rem">←</button>
-        <div>
-            <p class="section-label" style="margin:0">Frizer selectat</p>
-            <p style="font-weight:600;font-size:.95rem" id="frizer-display"></p>
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1.25rem">
+        <button onclick="goToStep(1)" class="step-back-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="step-breadcrumb">
+            <p class="section-label" style="margin:0 0 .05rem">{{ t.breadcrumb_frizer }}</p>
+            <p style="font-weight:700;font-size:.92rem;color:var(--text);margin:0" id="frizer-display"></p>
         </div>
     </div>
-
-    <p class="section-label">Alege data</p>
-    <div class="card" style="padding:1rem">
-        <input type="date" id="date-input" min="{{ today }}"
-               value="{{ selected_date }}"
-               style="margin:0;font-size:1.1rem;font-weight:600;background:transparent;border:none;padding:.25rem 0;color:var(--text);width:100%">
+    <p class="section-label">{{ t.step2_label }}</p>
+    <div class="cal-wrap">
+        <div class="cal-header">
+            <button type="button" class="cal-nav" id="cal-prev">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span class="cal-title" id="cal-title"></span>
+            <button type="button" class="cal-nav" id="cal-next">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+        </div>
+        <div class="cal-dow" id="cal-dow"></div>
+        <div class="cal-grid" id="cal-grid"></div>
     </div>
-    <button class="btn btn-primary btn-full" onclick="goToStep3()">Continua</button>
+    <input type="hidden" id="date-input" value="{{ selected_date }}">
+    <button class="btn btn-primary btn-full" onclick="goToStep3()" id="btn-step3"
+            {% if not selected_date %}disabled style="opacity:.35"{% endif %}>{{ t.btn_continue }}</button>
 </div>
 
 <!-- Step 3: Ora -->
 <div id="step-3" style="display:none">
-    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
-        <button onclick="goToStep(2)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.2rem;padding:.25rem">←</button>
-        <div>
-            <p class="section-label" style="margin:0">Data selectata</p>
-            <p style="font-weight:600;font-size:.95rem" id="date-display"></p>
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1.25rem">
+        <button onclick="goToStep(2)" class="step-back-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="step-breadcrumb">
+            <p class="section-label" style="margin:0 0 .05rem">{{ t.breadcrumb_date }}</p>
+            <p style="font-weight:700;font-size:.92rem;color:var(--text);margin:0" id="date-display"></p>
         </div>
     </div>
-
-    <p class="section-label">Ora disponibila</p>
-    <div id="slots-loading" style="color:var(--text2);font-size:.9rem;padding:1rem 0">Se incarca orele...</div>
+    <p class="section-label">{{ t.step3_label }}</p>
+    <div id="slots-loading" style="color:var(--text2);font-size:.9rem;padding:1rem 0">{{ t.loading_slots }}</div>
     <div class="time-grid" id="slots-grid" style="display:none"></div>
     <input type="hidden" id="selected-time" value="">
-    <p id="no-slots" style="display:none;color:var(--text2);font-size:.9rem;padding:.5rem 0">Nu sunt ore disponibile in aceasta zi.</p>
-
+    <p id="no-slots" style="display:none;color:var(--text2);font-size:.9rem;padding:.5rem 0">{{ t.no_slots }}</p>
     <button class="btn btn-primary btn-full" onclick="goToStep4()" id="btn-step4"
-            disabled style="opacity:.35;margin-top:.5rem">Continua</button>
+            disabled style="opacity:.35;margin-top:.5rem">{{ t.btn_continue }}</button>
 </div>
 
 <!-- Step 4: Date personale -->
 <div id="step-4" style="display:none">
-    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
-        <button onclick="goToStep(3)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.2rem;padding:.25rem">←</button>
-        <div>
-            <p class="section-label" style="margin:0">Programare</p>
-            <p style="font-weight:600;font-size:.95rem" id="summary-display"></p>
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1.25rem">
+        <button onclick="goToStep(3)" class="step-back-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="step-breadcrumb">
+            <p class="section-label" style="margin:0 0 .05rem">{{ t.step4_breadcrumb }}</p>
+            <p style="font-weight:700;font-size:.88rem;color:var(--text);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="summary-display"></p>
         </div>
     </div>
-
     <form method="post" action="/book" id="booking-form">
         <input type="hidden" name="date" id="form-date">
         <input type="hidden" name="time" id="form-time">
         <input type="hidden" name="frizer_id" id="form-frizer">
         <input type="hidden" name="service_id" id="form-service">
-
-        <label>Numele tau</label>
-        <input type="text" name="client_name" placeholder="Ion Popescu" required autocomplete="name">
-
-        <label>Telefon</label>
-        <input type="tel" name="client_phone" placeholder="07xx xxx xxx" required autocomplete="tel">
-
+        <label>{{ t.label_name }}</label>
+        <input type="text" name="client_name" placeholder="{{ t.placeholder_name }}" required autocomplete="name">
+        <label>{{ t.label_phone }}</label>
+        <input type="tel" name="client_phone" placeholder="{{ t.placeholder_phone }}" required autocomplete="tel">
         <button class="btn btn-primary btn-full" type="submit" id="btn-submit">
-            <span id="btn-text">Confirma rezervarea</span>
+            <span id="btn-text">{{ t.btn_confirm }}</span>
             <span class="spinner" id="btn-spinner"></span>
         </button>
     </form>
@@ -167,10 +328,21 @@
 <script>
 const TODAY    = "{{ today }}";
 const SELECTED = "{{ selected_date }}";
+const DAYS     = {{ t.days | tojson }};
+const MONTHS   = {{ t.months | tojson }};
+const T = {
+    frizer_day_off:          {{ t.frizer_day_off | tojson }},
+    select_frizer_first:     {{ t.select_frizer_first | tojson }},
+    no_slots:                {{ t.no_slots | tojson }},
+    frizer_day_off_slots:    {{ t.frizer_day_off | tojson }},
+    loading_error:           {{ t.loading_error | tojson }},
+    no_services:             {{ t.no_services | tojson }},
+    loading_services_error:  {{ t.loading_services_error | tojson }},
+};
 
-const DAYS   = ["Duminica","Luni","Marti","Miercuri","Joi","Vineri","Sambata"];
-const MONTHS = ["ian","feb","mar","apr","mai","iun","iul","aug","sep","oct","nov","dec"];
 let currentStep = 1;
+let disabledDates = [];
+let closedWeekdays = [];
 
 function formatDate(str) {
     if (!str) return '';
@@ -187,19 +359,16 @@ function goToStep(n) {
     window.scrollTo(0, 0);
 }
 
-// Step 1 -> 1.5 (Frizer -> Service)
 function goToStep2() {
     const frizer = document.getElementById('selected-frizer').value;
     if (!frizer) return;
-    const frizer_name = document.querySelector('.frizer-card.selected .frizer-info h3')?.textContent || 'Frizer selectat';
+    const frizer_name = document.querySelector('.frizer-card.selected .frizer-info h3')?.textContent || '';
     document.getElementById('frizer-display-step1-5').textContent = frizer_name;
-    
-    // Load services for selected frizer
     loadServicesForFrizer(frizer);
+    loadDisabledDates(frizer);
     goToStep('1-5');
 }
 
-// Step 1.5 -> 2 (Service -> Data)
 function goToStep2FromService() {
     const service = document.getElementById('selected-service').value;
     if (!service) return;
@@ -208,28 +377,28 @@ function goToStep2FromService() {
     goToStep(2);
 }
 
-// Step 2 -> 3 (Data -> Ora)
 function goToStep3() {
     const date = document.getElementById('date-input').value;
     if (!date || date < TODAY) return;
+    if (disabledDates.includes(date)) {
+        alert(T.frizer_day_off);
+        return;
+    }
     document.getElementById('date-display').textContent = formatDate(date);
     goToStep(3);
     loadSlots(date);
 }
 
-// Step 3 -> 4 (Ora -> Date personale)
 function goToStep4() {
     const time = document.getElementById('selected-time').value;
     const date = document.getElementById('date-input').value;
     const frizer = document.getElementById('selected-frizer').value;
     const service = document.getElementById('selected-service').value;
     if (!time || !service) return;
-    
-    const frizer_name = document.querySelector('.frizer-card.selected .frizer-info h3')?.textContent || 'Frizer';
-    const service_name = document.querySelector('.service-card.selected .service-info h3')?.textContent || 'Serviciu';
-    document.getElementById('summary-display').textContent = 
+    const frizer_name = document.querySelector('.frizer-card.selected .frizer-info h3')?.textContent || '';
+    const service_name = document.querySelector('.service-card.selected .service-info h3')?.textContent || '';
+    document.getElementById('summary-display').textContent =
         frizer_name + ' · ' + service_name + ' · ' + formatDate(date) + ' · ' + time;
-    
     document.getElementById('form-date').value = date;
     document.getElementById('form-time').value = time;
     document.getElementById('form-frizer').value = frizer;
@@ -240,19 +409,20 @@ function goToStep4() {
 async function loadSlots(date) {
     const frizer_id = document.getElementById('selected-frizer').value;
     if (!frizer_id) {
-        document.getElementById('slots-loading').textContent = 'Te rog selecteaza un frizer intai.';
+        document.getElementById('slots-loading').textContent = T.select_frizer_first;
         return;
     }
-    
     document.getElementById('slots-loading').style.display = 'block';
     document.getElementById('slots-grid').style.display    = 'none';
     document.getElementById('no-slots').style.display      = 'none';
     try {
         const data = await fetch(`/slots/${date}?frizer_id=${frizer_id}`).then(r => r.json());
         document.getElementById('slots-loading').style.display = 'none';
-        if (!data.length) { 
-            document.getElementById('no-slots').style.display = 'block'; 
-            return; 
+        if (!data.length) {
+            document.getElementById('no-slots').textContent = disabledDates.includes(date)
+                ? T.frizer_day_off_slots : T.no_slots;
+            document.getElementById('no-slots').style.display = 'block';
+            return;
         }
         const grid = document.getElementById('slots-grid');
         grid.innerHTML = '';
@@ -265,7 +435,24 @@ async function loadSlots(date) {
         });
         grid.style.display = 'grid';
     } catch(e) {
-        document.getElementById('slots-loading').textContent = 'Eroare la incarcare.';
+        document.getElementById('slots-loading').textContent = T.loading_error;
+    }
+}
+
+async function loadDisabledDates(frizer_id) {
+    try {
+        const [datesRes, weekdaysRes] = await Promise.all([
+            fetch(`/slots/disabled_dates?frizer_id=${frizer_id}`),
+            fetch(`/slots/closed_weekdays?frizer_id=${frizer_id}`),
+        ]);
+        const dates    = await datesRes.json();
+        const weekdays = await weekdaysRes.json();
+        disabledDates  = Array.isArray(dates)    ? dates    : [];
+        closedWeekdays = Array.isArray(weekdays) ? weekdays : [];
+        if (window._calRender) window._calRender();
+    } catch(e) {
+        disabledDates  = [];
+        closedWeekdays = [];
     }
 }
 
@@ -295,7 +482,8 @@ async function loadServicesForFrizer(frizer_id) {
         const services = await response.json();
         document.getElementById('services-loading').style.display = 'none';
         if (!services.length) {
-            document.getElementById('services-loading').textContent = 'Nu sunt servicii disponibile pentru acest frizer.';
+            document.getElementById('services-loading').textContent = T.no_services;
+            document.getElementById('services-loading').style.display = 'block';
             return;
         }
         const grid = document.getElementById('service-grid');
@@ -315,7 +503,8 @@ async function loadServicesForFrizer(frizer_id) {
         });
         grid.style.display = 'grid';
     } catch(e) {
-        document.getElementById('services-loading').textContent = 'Eroare la incarcare servicii.';
+        document.getElementById('services-loading').textContent = T.loading_services_error;
+        document.getElementById('services-loading').style.display = 'block';
     }
 }
 
@@ -333,8 +522,165 @@ document.getElementById('booking-form')?.addEventListener('submit', () => {
     document.getElementById('btn-spinner').style.display = 'block';
 });
 
-if (SELECTED) { 
-    document.getElementById('date-input').value = SELECTED; 
-}
+// ── Custom Calendar ───────────────────────────────────────────────────────
+(function() {
+    const todayD = new Date(TODAY + 'T00:00:00');
+    let viewYear  = todayD.getFullYear();
+    let viewMonth = todayD.getMonth();
+
+    const hiddenInput = document.getElementById('date-input');
+    let selectedDate  = hiddenInput.value || null;
+
+    if (selectedDate) {
+        const d = new Date(selectedDate + 'T00:00:00');
+        viewYear  = d.getFullYear();
+        viewMonth = d.getMonth();
+    }
+
+    const btnStep3 = document.getElementById('btn-step3');
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    // Day-of-week header — Mon first, using translated day names
+    const dowEl = document.getElementById('cal-dow');
+    if (dowEl) {
+        [1, 2, 3, 4, 5, 6, 0].forEach(i => {
+            const s = document.createElement('span');
+            s.textContent = DAYS[i].slice(0, 2);
+            dowEl.appendChild(s);
+        });
+    }
+
+    function render() {
+        const titleEl = document.getElementById('cal-title');
+        const gridEl  = document.getElementById('cal-grid');
+        if (!titleEl || !gridEl) return;
+
+        titleEl.textContent = MONTHS[viewMonth] + ' ' + viewYear;
+
+        const firstDow  = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
+        const offset    = (firstDow + 6) % 7;                        // Mon-first offset
+        const daysCount = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+        gridEl.innerHTML = '';
+
+        for (let i = 0; i < offset; i++) {
+            const empty = document.createElement('div');
+            empty.className = 'cal-day cal-empty';
+            gridEl.appendChild(empty);
+        }
+
+        for (let d = 1; d <= daysCount; d++) {
+            const ds = `${viewYear}-${pad(viewMonth + 1)}-${pad(d)}`;
+            const el = document.createElement('div');
+            el.textContent = d;
+
+            const isPast        = ds < TODAY;
+            const jsDay         = new Date(ds + 'T00:00:00').getDay();
+            const isWeekdayOff  = closedWeekdays.includes(jsDay);
+            const isDisabled    = !isPast && (disabledDates.includes(ds) || isWeekdayOff);
+            const isToday       = ds === TODAY;
+            const isSelected    = ds === selectedDate;
+
+            let cls = 'cal-day';
+            if (isSelected)      cls += ' cal-selected';
+            else if (isToday)    cls += ' cal-today';
+            if (isPast)          cls += ' cal-past';
+            else if (isDisabled) cls += ' cal-off';
+
+            el.className = cls;
+
+            if (!isPast && !isDisabled) {
+                el.addEventListener('click', () => {
+                    selectedDate = ds;
+                    hiddenInput.value = ds;
+                    if (btnStep3) { btnStep3.disabled = false; btnStep3.style.opacity = '1'; }
+                    render();
+                });
+            }
+
+            gridEl.appendChild(el);
+        }
+    }
+
+    document.getElementById('cal-prev').addEventListener('click', () => {
+        if (--viewMonth < 0) { viewMonth = 11; viewYear--; }
+        render();
+    });
+    document.getElementById('cal-next').addEventListener('click', () => {
+        if (++viewMonth > 11) { viewMonth = 0; viewYear++; }
+        render();
+    });
+
+    window._calRender = render;
+    render();
+})();
+
+// ── Carousel ──────────────────────────────────────────────────────────────
+(function() {
+    const viewport = document.getElementById('gallery-viewport');
+    const track    = document.getElementById('gallery-track');
+    const dotBox   = document.getElementById('gallery-dots');
+    if (!track) return;
+
+    const slides = track.querySelectorAll('.gallery-slide');
+    const total  = slides.length;
+    if (total < 2) return;
+
+    let cur = 0, startX = 0, dragDelta = 0, dragging = false, autoTimer;
+
+    for (let i = 0; i < total; i++) {
+        const d = document.createElement('button');
+        d.className = 'gdot' + (i === 0 ? ' active' : '');
+        d.addEventListener('click', () => { go(i); restartAuto(); });
+        dotBox.appendChild(d);
+    }
+
+    function go(n, animate = true) {
+        cur = ((n % total) + total) % total;
+        if (!animate) track.style.transition = 'none';
+        track.style.transform = `translateX(-${cur * 100}%)`;
+        if (!animate) requestAnimationFrame(() => { track.style.transition = ''; });
+        dotBox.querySelectorAll('.gdot').forEach((d, i) => d.classList.toggle('active', i === cur));
+    }
+
+    function restartAuto() {
+        clearInterval(autoTimer);
+        autoTimer = setInterval(() => go(cur + 1), 4500);
+    }
+
+    viewport.addEventListener('touchstart', e => {
+        startX = e.touches[0].clientX; dragging = true; dragDelta = 0;
+        track.style.transition = 'none'; clearInterval(autoTimer);
+    }, { passive: true });
+    viewport.addEventListener('touchmove', e => {
+        if (!dragging) return;
+        dragDelta = e.touches[0].clientX - startX;
+        track.style.transform = `translateX(calc(-${cur * 100}% + ${dragDelta}px))`;
+    }, { passive: true });
+    viewport.addEventListener('touchend', () => {
+        track.style.transition = '';
+        go(Math.abs(dragDelta) > 48 ? cur + (dragDelta < 0 ? 1 : -1) : cur);
+        dragging = false; dragDelta = 0; restartAuto();
+    });
+    viewport.addEventListener('mousedown', e => {
+        startX = e.clientX; dragging = true; dragDelta = 0;
+        track.style.transition = 'none'; viewport.style.cursor = 'grabbing';
+        clearInterval(autoTimer); e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        dragDelta = e.clientX - startX;
+        track.style.transform = `translateX(calc(-${cur * 100}% + ${dragDelta}px))`;
+    });
+    document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        track.style.transition = ''; viewport.style.cursor = '';
+        go(Math.abs(dragDelta) > 48 ? cur + (dragDelta < 0 ? 1 : -1) : cur);
+        dragging = false; dragDelta = 0; restartAuto();
+    });
+
+    restartAuto();
+})();
 </script>
 {% endblock %}

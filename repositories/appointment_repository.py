@@ -55,6 +55,15 @@ class AppointmentRepository(BaseRepository[Appointment]):
             .all()
         )
 
+    def get_by_date_range_and_frizer(self, start_date: date, end_date: date, frizer_id: int) -> list[Appointment]:
+        """Programarile dintr-un interval de date pentru un frizer specific."""
+        return (
+            self.db.query(Appointment)
+            .filter(Appointment.date >= start_date, Appointment.date <= end_date, Appointment.frizer_id == frizer_id)
+            .order_by(Appointment.date, Appointment.start_time)
+            .all()
+        )
+
     def cancel(self, appointment: Appointment) -> Appointment:
         """Anuleaza o programare existenta."""
         appointment.status = AppointmentStatus.CANCELLED

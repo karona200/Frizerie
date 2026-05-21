@@ -1,7 +1,6 @@
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db
 from services.working_hours_service import WorkingHoursService
@@ -13,7 +12,7 @@ admin_router = APIRouter(prefix="/admin/schedule", tags=["admin-schedule"])
 # Public routes  
 public_router = APIRouter(prefix="/schedule", tags=["public-schedule"])
 
-templates = Jinja2Templates(directory="templates")
+from templates_env import templates
 
 
 @admin_router.get("/", response_class=HTMLResponse)

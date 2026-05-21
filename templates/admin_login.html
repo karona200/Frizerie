@@ -2,14 +2,25 @@
 {% block title %}Admin — {{ app_name }}{% endblock %}
 {% block content %}
 
-<div style="padding-top:2rem">
-    <h1 class="page-title">Panou frizer</h1>
+<div style="padding-top:3rem;max-width:360px;margin:0 auto;text-align:center">
+    <div style="margin-bottom:2rem">
+        <div style="width:60px;height:60px;background:var(--accent-bg);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem;border:1.5px solid var(--accent-border)">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
+                <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+                <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+                <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+            </svg>
+        </div>
+        <h1 style="font-size:1.4rem;font-weight:700;letter-spacing:-.4px;margin-bottom:.3rem">Panou frizer</h1>
+        <p class="muted" style="font-size:.88rem">Introdu parola pentru acces</p>
+    </div>
 
     {% if error %}
     <div class="alert alert-error">{{ error }}</div>
     {% endif %}
 
-    <form method="post" action="/admin/">
+    <form method="post" action="/admin/" style="text-align:left">
         <label>Parola</label>
         <input type="password" name="password" placeholder="••••••••" autofocus required>
         <button class="btn btn-primary btn-full" type="submit">Intra</button>

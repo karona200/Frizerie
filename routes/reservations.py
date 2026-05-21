@@ -1,24 +1,34 @@
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db
+from templates_env import templates
 from services.appointment_service import AppointmentService
 from services.slot_service import SlotService
 from services.service_service import ServiceService
 from repositories.frizer_repository import FrizerRepository
 from schemas import AppointmentCreate
 from config import config
+from i18n import get_t, SUPPORTED
 
 router = APIRouter(tags=["reservations"])
-templates = Jinja2Templates(directory="templates")
+
+
+@router.get("/set-lang/{lang}")
+def set_language(lang: str, next: str = "/"):
+    if lang not in SUPPORTED:
+        lang = "ro"
+    response = RedirectResponse(url=next, status_code=303)
+    response.set_cookie("lang", lang, max_age=365 * 24 * 3600, httponly=False, samesite="lax")
+    return response
 
 
 @router.get("/", response_class=HTMLResponse)
 def booking_page(request: Request, selected_date: str = "", frizer_id: int = None, db: Session = Depends(get_db)):
     """Pagina principala cu formularul de rezervare."""
     today = date.today().isoformat()
+    t, lang = get_t(request)
 
     slots = []
     if selected_date:
@@ -33,15 +43,26 @@ def booking_page(request: Request, selected_date: str = "", frizer_id: int = Non
     if frizer_id:
         services = ServiceService(db).get_all_for_frizer(frizer_id)
 
+    from repositories.gallery_repository import GalleryRepository
+    gallery_repo    = GalleryRepository(db)
+    all_photos      = gallery_repo.get_all()
+    bg_photo        = gallery_repo.get_background()
+    carousel_photos = [p for p in all_photos if not p.is_background]
+
     return templates.TemplateResponse("book.html", {
-        "request":       request,
-        "app_name":      config.app_name,
-        "services":      services,
-        "today":         today,
-        "selected_date": selected_date,
-        "slots":         slots,
-        "frizers":       frizers,
+        "request":        request,
+        "app_name":       config.app_name,
+        "services":       services,
+        "today":          today,
+        "selected_date":  selected_date,
+        "slots":          slots,
+        "frizers":        frizers,
         "selected_frizer_id": frizer_id,
+        "gallery_photos": carousel_photos,
+        "bg_photo":       bg_photo,
+        "t":              t,
+        "lang":           lang,
+        "supported_langs": SUPPORTED,
     })
 
 
@@ -57,6 +78,7 @@ def create_booking(
     db:           Session = Depends(get_db),
 ):
     """Proceseaza formularul de rezervare si salveaza in DB."""
+    t, lang = get_t(request)
     try:
         data = AppointmentCreate(
             client_name=client_name,
@@ -81,6 +103,9 @@ def create_booking(
             "frizers":       frizers,
             "selected_frizer_id": frizer_id,
             "error":         str(e),
+            "t":             t,
+            "lang":          lang,
+            "supported_langs": SUPPORTED,
         }, status_code=400)
 
     return RedirectResponse(url=f"/confirmation/{appointment.id}", status_code=303)
@@ -94,8 +119,12 @@ def confirmation_page(appointment_id: int, request: Request, db: Session = Depen
     if not appointment:
         raise HTTPException(status_code=404, detail="Programarea nu a fost gasita.")
 
+    t, lang = get_t(request)
     return templates.TemplateResponse("confirmation.html", {
         "request":     request,
         "app_name":    config.app_name,
         "appointment": appointment,
+        "t":           t,
+        "lang":        lang,
+        "supported_langs": SUPPORTED,
     })

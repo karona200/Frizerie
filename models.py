@@ -211,6 +211,21 @@ class WorkingHours(Base):
         )
 
 
+class GalleryPhoto(Base):
+    """Poze afisate in caruselul de pe pagina principala."""
+    __tablename__ = "gallery_photos"
+
+    id:           Mapped[int]           = mapped_column(Integer, primary_key=True, index=True)
+    file_path:    Mapped[str]           = mapped_column(String(255), nullable=False)
+    caption:      Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    sort_order:   Mapped[int]           = mapped_column(Integer, default=0, nullable=False)
+    is_background:Mapped[bool]          = mapped_column(Boolean, default=False, nullable=False)
+    created_at:   Mapped[datetime]      = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<GalleryPhoto id={self.id} path={self.file_path!r}>"
+
+
 class WorkingHoursOverride(Base):
     """
     Orarul de lucru pentru o data explicita de un frizer (zile libere).

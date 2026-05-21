@@ -42,77 +42,138 @@
         {% endif %}
     </div>
 </div>
+{# Weekly overview: if week_dates is provided, render week grid #}
+{% if week_dates %}
+<style>
+/* Week grid: desktop = 7 columns, mobile = horizontal scroll */
+.week-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:.6rem; align-items:start }
+.day-card { border:1px solid var(--border2); padding:.6rem; border-radius:6px; min-height:120px; display:flex; flex-direction:column }
+.day-appts { margin-top:6px; overflow:auto }
+.day-appts .appt-row { margin-bottom:.35rem }
+@media (max-width:700px) {
+    .week-grid { display:flex; overflow-x:auto; padding-bottom:.5rem }
+    .week-grid > div { min-width:200px; flex:0 0 200px }
+}
+/* limit height so headers remain visible when many bookings */
+.day-card { max-height:320px }
+.day-appts { max-height:240px }
+</style>
 
-{% if appointments %}
-<div class="card-flush">
-    {% for appt in appointments %}
-    {% set cancelled = appt.status.value == 'cancelled' %}
-
-    <div class="appt-row {{ 'cancelled' if cancelled else '' }}" id="row-{{ appt.id }}">
-        <div class="appt-time">{{ appt.start_time.strftime('%H:%M') }}</div>
-        <div class="appt-info">
-            <div class="appt-name">{{ appt.client_name }}</div>
-            <div class="appt-sub">
-                {{ appt.phone if appt.phone else appt.client_phone }}
-                &nbsp;·&nbsp;
-                <span class="badge badge-white" style="font-size:.7rem">{{ appt.service_rel.name }}</span>
+<div class="card-flush week-grid">
+    {% set wd = ["Luni","Marti","Miercuri","Joi","Vineri","Sambata","Duminica"] %}
+    {% for d in week_dates %}
+    <div class="day-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+            <div style="font-weight:600">{{ wd[d.weekday()] }} — {{ d.strftime('%d.%m') }}</div>
+            <div>
+                <a href="/admin/dashboard?frizer_id={{ selected_frizer.id if selected_frizer else '' }}&selected_date={{ d.isoformat() }}" class="btn btn-ghost" style="padding:.25rem .5rem;font-size:.75rem">Vezi</a>
             </div>
         </div>
-        <div class="appt-actions">
-            {% if cancelled %}
-            <span class="badge badge-red">Anulata</span>
+
+        <div class="day-appts" id="day-{{ d.isoformat() }}">
+            {% set day_appts = appointments | selectattr('date', 'equalto', d) | list %}
+            {% if day_appts %}
+                {% for appt in day_appts %}
+                {% set cancelled = appt.status.value == 'cancelled' %}
+                <div class="appt-row {{ 'cancelled' if cancelled else '' }}" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;padding:.25rem;border-radius:4px;background:var(--bg)">
+                    <div style="display:flex;gap:.5rem;align-items:center">
+                        <div style="font-weight:600;width:56px">{{ appt.start_time.strftime('%H:%M') }}</div>
+                        <div>
+                            <div style="font-weight:600">{{ appt.client_name }}</div>
+                            <div class="muted" style="font-size:.8rem">{{ appt.client_phone }} · <span class="badge badge-white" style="font-size:.65rem">{{ appt.service_rel.name }}</span></div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:.4rem;align-items:center">
+                        {% if cancelled %}
+                        <span class="badge badge-red">Anulata</span>
+                        {% else %}
+                        <a class="btn btn-ghost" href="/admin/dashboard?frizer_id={{ appt.frizer_id }}&selected_date={{ appt.date.isoformat() }}#row-{{ appt.id }}">Detalii</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
             {% else %}
-            <button class="btn btn-ghost" style="padding:.4rem .75rem;font-size:.8rem"
-                    onclick="toggleEdit({{ appt.id }})">
-                Edit
-            </button>
-            <form method="post" action="/admin/cancel/{{ appt.id }}" style="margin:0"
-                  onsubmit="return confirmCancel(event, this, '{{ appt.client_name }}')">
-                <input type="hidden" name="selected_date" value="{{ selected_date }}">
-                <input type="hidden" name="frizer_id" value="{{ appt.frizer_id }}">
-                <button type="submit" class="btn btn-danger" style="padding:.4rem .75rem;font-size:.8rem">
-                    ✕
-                </button>
-            </form>
+                <div class="muted" style="font-size:.85rem">Nicio programare</div>
             {% endif %}
         </div>
     </div>
-
-    {% if not cancelled %}
-    <div class="edit-panel" id="edit-{{ appt.id }}">
-        <form method="post" action="/admin/update/{{ appt.id }}">
-            <input type="hidden" name="frizer_id" value="{{ appt.frizer_id }}">
-            <div class="edit-row">
-                <div style="flex:1;min-width:130px">
-                    <label style="margin-bottom:.3rem">Data</label>
-                    <input type="date" name="date" value="{{ appt.date.isoformat() }}" min="{{ today }}">
-                </div>
-                <div style="flex:1;min-width:110px">
-                    <label style="margin-bottom:.3rem">Ora</label>
-                    <input type="time" name="time" value="{{ appt.start_time.strftime('%H:%M') }}">
-                </div>
-                <div style="display:flex;gap:.4rem;padding-bottom:.05rem">
-                    <button type="submit" class="btn btn-primary" style="padding:.6rem 1rem;font-size:.85rem">
-                        Salveaza
-                    </button>
-                    <button type="button" class="btn btn-ghost" style="padding:.6rem .75rem;font-size:.85rem"
-                            onclick="toggleEdit({{ appt.id }})">
-                        ✕
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-    {% endif %}
-
     {% endfor %}
 </div>
+{# If no appointments at all in the week, show empty state #}
+{% if appointments|length == 0 %}
+<div style="text-align:center;padding:2rem 1rem;color:var(--text3)">
+    <div style="font-size:2rem;margin-bottom:.5rem">📅</div>
+    <p style="font-weight:500">Nicio programare pentru această săptămână</p>
+    <p style="font-size:.85rem;margin-top:.3rem">Schimbă data sau frizerul pentru alte intervale.</p>
+</div>
+{% endif %}
+{% endif %}
 
-{% else %}
-<div style="text-align:center;padding:4rem 1rem;color:var(--text3)">
-    <div style="font-size:2.5rem;margin-bottom:.75rem">📅</div>
-    <p style="font-weight:500">Nicio programare</p>
-    <p style="font-size:.85rem;margin-top:.3rem">Nu sunt programari pentru aceasta zi.</p>
+{# Detailed list for selected_date (to allow edit/cancel) #}
+{% if selected_date %}
+<hr style="margin:1.25rem 0">
+<h2 style="margin-bottom:.6rem">Detalii pentru {{ selected_date }}</h2>
+{% set ns = namespace(count=0) %}
+<div class="card-flush">
+    {% for appt in appointments %}
+        {% if appt.date.isoformat() == selected_date %}
+            {% set ns.count = ns.count + 1 %}
+            {% set cancelled = appt.status.value == 'cancelled' %}
+            <div class="appt-row {{ 'cancelled' if cancelled else '' }}" id="row-{{ appt.id }}">
+                <div class="appt-time">{{ appt.start_time.strftime('%H:%M') }}</div>
+                <div class="appt-info">
+                    <div class="appt-name">{{ appt.client_name }}</div>
+                    <div class="appt-sub">
+                        {{ appt.phone if appt.phone else appt.client_phone }}
+                        &nbsp;·&nbsp;
+                        <span class="badge badge-white" style="font-size:.7rem">{{ appt.service_rel.name }}</span>
+                    </div>
+                </div>
+                <div class="appt-actions">
+                    {% if cancelled %}
+                    <span class="badge badge-red">Anulata</span>
+                    {% else %}
+                    <button class="btn btn-ghost" style="padding:.4rem .75rem;font-size:.8rem" onclick="toggleEdit({{ appt.id }})">Edit</button>
+                    <form method="post" action="/admin/cancel/{{ appt.id }}" style="margin:0" onsubmit="return confirmCancel(event, this, '{{ appt.client_name }}')">
+                        <input type="hidden" name="selected_date" value="{{ selected_date }}">
+                        <input type="hidden" name="frizer_id" value="{{ appt.frizer_id }}">
+                        <button type="submit" class="btn btn-danger" style="padding:.4rem .75rem;font-size:.8rem">✕</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if not cancelled %}
+            <div class="edit-panel" id="edit-{{ appt.id }}" style="display:none" data-current-time="{{ appt.start_time.strftime('%H:%M') }}" data-frizer-id="{{ appt.frizer_id }}">
+                <form method="post" action="/admin/update/{{ appt.id }}">
+                    <input type="hidden" name="frizer_id" value="{{ appt.frizer_id }}">
+                    <div class="edit-row">
+                        <div style="flex:1;min-width:130px">
+                            <label style="margin-bottom:.3rem">Data</label>
+                            <input type="date" name="date" value="{{ appt.date.isoformat() }}" min="{{ today }}">
+                        </div>
+                        <div style="flex:1;min-width:110px">
+                            <label style="margin-bottom:.3rem">Ora</label>
+                            <select name="time" id="time-select-{{ appt.id }}" style="margin:0;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:.5rem .65rem;font-size:.9rem;font-family:inherit;outline:none;cursor:pointer">
+                                <option value="{{ appt.start_time.strftime('%H:%M') }}">{{ appt.start_time.strftime('%H:%M') }}</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;gap:.4rem;padding-bottom:.05rem">
+                            <button type="submit" class="btn btn-primary" style="padding:.6rem 1rem;font-size:.85rem">Salveaza</button>
+                            <button type="button" class="btn btn-ghost" style="padding:.6rem .75rem;font-size:.85rem" onclick="toggleEdit({{ appt.id }})">✕</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+    {% if ns.count == 0 %}
+    <div style="text-align:center;padding:2rem 1rem;color:var(--text3)">
+        <div style="font-size:2rem;margin-bottom:.5rem">📅</div>
+        <p style="font-weight:500">Nicio programare pentru această zi</p>
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -147,21 +208,77 @@
             <path d="M22 2l-4 4"/>
         </svg>
         Frizeri
-    </a>    <a href="/" class="nav-item">
+    </a>    <a href="/admin/gallery" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
         </svg>
-        Site
+        Galerie
+    </a>
+    <a href="/admin/settings" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Setari
     </a>
 </nav>
 {% endblock %}
 
 {% block scripts %}
 <script>
+async function loadEditSlots(apptId, frizerId, selectedDate, currentTime) {
+    const select = document.getElementById('time-select-' + apptId);
+    if (!select) return;
+    select.innerHTML = '<option value="">Se incarca...</option>';
+    try {
+        const res = await fetch('/slots/admin/' + selectedDate + '?frizer_id=' + frizerId);
+        if (!res.ok) {
+            const text = await res.text();
+            console.error('Slots endpoint error', res.status, text);
+            select.innerHTML = '<option value="">Eroare ' + res.status + '</option>';
+            return;
+        }
+        const slots = await res.json();
+        if (!Array.isArray(slots)) throw new Error('Raspuns invalid: ' + JSON.stringify(slots));
+        select.innerHTML = '';
+        let foundCurrent = false;
+        for (const slot of slots) {
+            if (slot.available || slot.time === currentTime) {
+                const opt = document.createElement('option');
+                opt.value = slot.time;
+                opt.textContent = slot.time;
+                if (slot.time === currentTime) { opt.selected = true; foundCurrent = true; }
+                select.appendChild(opt);
+            }
+        }
+        if (!foundCurrent && currentTime && select.options.length > 0) {
+            // current time not available on this date — select first available instead
+            select.options[0].selected = true;
+        }
+        if (select.options.length === 0) {
+            select.innerHTML = '<option value="">Niciun slot disponibil</option>';
+        }
+    } catch(e) {
+        console.error('loadEditSlots exception:', e);
+        select.innerHTML = '<option value="">Eroare la incarcare</option>';
+    }
+}
+
 function toggleEdit(id) {
     const panel = document.getElementById('edit-' + id);
-    panel.classList.toggle('open');
+    if (!panel) return;
+    const isHidden = getComputedStyle(panel).display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        panel.scrollIntoView({behavior: 'smooth', block: 'center'});
+        const dateInput = panel.querySelector('input[name="date"]');
+        const frizerId = panel.dataset.frizerId;
+        if (dateInput && frizerId) {
+            loadEditSlots(id, frizerId, dateInput.value, panel.dataset.currentTime);
+        }
+    }
 }
 
 function confirmCancel(e, form, name) {
@@ -175,4 +292,59 @@ function confirmCancel(e, form, name) {
     return true;
 }
 </script>
+<script>
+// Enable drag-to-scroll for the week grid (mouse drag + touch)
+document.addEventListener('DOMContentLoaded', function() {
+    const slider = document.querySelector('.week-grid');
+    if (!slider) return;
+
+    slider.style.cursor = 'grab';
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    slider.addEventListener('mousedown', (e) => {
+        isDown = true;
+        slider.classList.add('active');
+        startX = e.pageX - slider.offsetLeft;
+        scrollLeft = slider.scrollLeft;
+    });
+    slider.addEventListener('mouseleave', () => { isDown = false; slider.classList.remove('active'); });
+    slider.addEventListener('mouseup', () => { isDown = false; slider.classList.remove('active'); });
+    slider.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - slider.offsetLeft;
+        const walk = (x - startX) * 1; // scroll-fast factor
+        slider.scrollLeft = scrollLeft - walk;
+    });
+
+    // Touch support
+    let touchStartX = 0;
+    slider.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].pageX;
+        scrollLeft = slider.scrollLeft;
+    }, {passive: true});
+    slider.addEventListener('touchmove', (e) => {
+        const x = e.touches[0].pageX;
+        const walk = (x - touchStartX) * 1;
+        slider.scrollLeft = scrollLeft - walk;
+    }, {passive: true});
+});
+
+// Reload slots when date changes inside any edit panel
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.edit-panel input[name="date"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const panel = this.closest('.edit-panel');
+            const apptId = panel.id.replace('edit-', '');
+            loadEditSlots(apptId, panel.dataset.frizerId, this.value, panel.dataset.currentTime);
+        });
+    });
+});
+</script>
+<style>
+.week-grid { cursor: grab }
+.week-grid.active { cursor: grabbing }
+</style>
 {% endblock %}

@@ -1,43 +1,46 @@
 {% extends "base.html" %}
-{% block title %}Confirmat — {{ app_name }}{% endblock %}
+{% block title %}{{ t.confirm_title }} — {{ app_name }}{% endblock %}
 {% block content %}
 
-<div style="text-align:center;padding:2rem 0 1rem">
-    <div style="width:60px;height:60px;background:var(--success-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.6rem">✓</div>
-    <h1 style="font-size:1.4rem;font-weight:700;margin-bottom:.4rem">Rezervat!</h1>
-    <p class="muted" style="font-size:.9rem">Te asteptam cu drag.</p>
+<div style="text-align:center;padding:2.5rem 0 1rem">
+    <div style="width:68px;height:68px;background:var(--success-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;border:2px solid rgba(39,103,73,.15)">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>
+    </div>
+    <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:.35rem;letter-spacing:-.4px">{{ t.confirm_title }}</h1>
+    <p class="muted" style="font-size:.9rem">{{ t.confirm_subtitle }}</p>
 </div>
 
 <div class="card" style="margin-top:1.5rem">
     <div style="display:flex;flex-direction:column;gap:.9rem">
         <div style="display:flex;justify-content:space-between;align-items:center">
-            <span class="muted" style="font-size:.85rem">Data</span>
+            <span class="muted" style="font-size:.85rem">{{ t.label_date }}</span>
             <span style="font-weight:600;font-size:.95rem">{{ appointment.date.strftime('%d %b %Y') }}</span>
         </div>
         <div style="border-top:1px solid var(--border)"></div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-            <span class="muted" style="font-size:.85rem">Ora</span>
+            <span class="muted" style="font-size:.85rem">{{ t.label_time }}</span>
             <span style="font-weight:700;font-size:1.3rem;letter-spacing:-.5px">{{ appointment.start_time.strftime('%H:%M') }}</span>
         </div>
         <div style="border-top:1px solid var(--border)"></div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-            <span class="muted" style="font-size:.85rem">Serviciu</span>
+            <span class="muted" style="font-size:.85rem">{{ t.label_service }}</span>
             <span class="badge badge-white">{{ appointment.service_rel.name }}</span>
         </div>
         <div style="border-top:1px solid var(--border)"></div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-            <span class="muted" style="font-size:.85rem">Nume</span>
+            <span class="muted" style="font-size:.85rem">{{ t.label_name_conf }}</span>
             <span style="font-weight:500;font-size:.9rem">{{ appointment.client_name }}</span>
         </div>
         <div style="border-top:1px solid var(--border)"></div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-            <span class="muted" style="font-size:.85rem">Telefon</span>
+            <span class="muted" style="font-size:.85rem">{{ t.label_phone_conf }}</span>
             <span style="font-size:.9rem">{{ appointment.client_phone }}</span>
         </div>
     </div>
 </div>
 
-<a href="/" class="btn btn-ghost btn-full" style="margin-top:.5rem">
-    Alta rezervare
-</a>
+<a href="/" class="btn btn-ghost btn-full" style="margin-top:.5rem">{{ t.btn_another }}</a>
+
 {% endblock %}

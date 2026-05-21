@@ -1,9 +1,10 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, Request, Form, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db
+from templates_env import templates, SITE
+from site_config import get_logo_path, set_logo_path, get_site_name, set_site_name
 from services.appointment_service import AppointmentService
 from repositories.frizer_repository import FrizerRepository
 from schemas import AppointmentUpdate
@@ -11,7 +12,6 @@ from config import config
 import os
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-templates = Jinja2Templates(directory="templates")
 
 
 def _check_password(password: str) -> bool:
@@ -52,6 +52,11 @@ def admin_dashboard(
     today = date.today().isoformat()
     target = date.fromisoformat(selected_date) if selected_date else date.today()
 
+    # Compute week range (Monday..Sunday) containing target
+    start_of_week = target - timedelta(days=target.weekday())
+    week_dates = [start_of_week + timedelta(days=i) for i in range(7)]
+    end_of_week = week_dates[-1]
+
     # Get all frizers for selector
     frizer_repo = FrizerRepository(db)
     frizers = frizer_repo.get_all()
@@ -61,7 +66,8 @@ def admin_dashboard(
         frizer_id = frizers[0].id
     
     service = AppointmentService(db)
-    appointments = service.get_by_date_and_frizer(target, frizer_id) if frizer_id else []
+    # Get all appointments for the whole week for selected frizer
+    appointments = service.get_by_date_range_and_frizer(start_of_week, end_of_week, frizer_id) if frizer_id else []
     
     selected_frizer = frizer_repo.get_by_id(frizer_id) if frizer_id else None
 
@@ -70,6 +76,9 @@ def admin_dashboard(
         "app_name":        config.app_name,
         "appointments":    appointments,
         "selected_date":   target.isoformat(),
+        "week_dates":      week_dates,
+        "start_of_week":   start_of_week,
+        "end_of_week":     end_of_week,
         "today":           today,
         "frizers":         frizers,
         "selected_frizer": selected_frizer,
@@ -80,6 +89,7 @@ def admin_dashboard(
 def cancel_appointment(
     appointment_id: int,
     frizer_id: int = Form(None),
+    selected_date: str = Form(None),
     db: Session = Depends(get_db)
 ):
     """Anuleaza o programare."""
@@ -89,8 +99,13 @@ def cancel_appointment(
         raise HTTPException(status_code=404, detail=str(e))
     
     redirect_url = "/admin/dashboard"
+    params = []
     if frizer_id:
-        redirect_url += f"?frizer_id={frizer_id}"
+        params.append(f"frizer_id={frizer_id}")
+    if selected_date:
+        params.append(f"selected_date={selected_date}")
+    if params:
+        redirect_url += "?" + "&".join(params)
     return RedirectResponse(url=redirect_url, status_code=303)
 
 
@@ -111,10 +126,15 @@ def update_appointment(
         AppointmentService(db).update(appointment_id, data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+    # After update, redirect back to dashboard showing the appointment's date
     redirect_url = "/admin/dashboard"
+    params = []
     if frizer_id:
-        redirect_url += f"?frizer_id={frizer_id}"
+        params.append(f"frizer_id={frizer_id}")
+    if date_str:
+        params.append(f"selected_date={date_str}")
+    if params:
+        redirect_url += "?" + "&".join(params)
     return RedirectResponse(url=redirect_url, status_code=303)
 
 
@@ -221,7 +241,7 @@ def update_frizer(
 
 
 @router.post("/frizers/{frizer_id}/delete")
-def delete_frizer(frizer_id: int, db: Session = Depends(get_db)):
+def delete_frizer(frizer_id: int, db: Session = Depends(get_db)):  # noqa: F811
     """Sterge un frizer."""
     frizer = FrizerRepository(db).get_by_id(frizer_id)
     if not frizer:
@@ -233,3 +253,149 @@ def delete_frizer(frizer_id: int, db: Session = Depends(get_db)):
     
     FrizerRepository(db).delete_frizer()
     return RedirectResponse(url="/admin/frizers", status_code=303)
+
+
+# ── Gallery ─────────────────────────────────────────────────────────────────
+@router.get("/gallery", response_class=HTMLResponse)
+def gallery_page(request: Request, db: Session = Depends(get_db)):
+    from repositories.gallery_repository import GalleryRepository
+    photos = GalleryRepository(db).get_all()
+    return templates.TemplateResponse("admin_gallery.html", {
+        "request":  request,
+        "app_name": config.app_name,
+        "photos":   photos,
+    })
+
+
+@router.post("/gallery/upload")
+def upload_gallery_photo(
+    caption: str       = Form(""),
+    image:   UploadFile = File(...),
+    db:      Session   = Depends(get_db),
+):
+    from repositories.gallery_repository import GalleryRepository
+    from models import GalleryPhoto
+    if not image or not image.filename:
+        return RedirectResponse(url="/admin/gallery", status_code=303)
+
+    os.makedirs("static/images/gallery", exist_ok=True)
+    ext      = os.path.splitext(image.filename)[1].lower()
+    filename = f"gallery_{datetime.now().strftime('%Y%m%d_%H%M%S%f')}{ext}"
+    file_path = f"static/images/gallery/{filename}"
+    with open(file_path, "wb") as f:
+        f.write(image.file.read())
+
+    photo = GalleryPhoto(file_path=f"/{file_path}", caption=caption.strip() or None)
+    GalleryRepository(db).create(photo)
+    return RedirectResponse(url="/admin/gallery", status_code=303)
+
+
+@router.post("/gallery/{photo_id}/delete")
+def delete_gallery_photo(photo_id: int, db: Session = Depends(get_db)):
+    from repositories.gallery_repository import GalleryRepository
+    repo  = GalleryRepository(db)
+    photo = repo.get_by_id(photo_id)
+    if photo:
+        if photo.file_path and os.path.exists(photo.file_path.lstrip("/")):
+            os.remove(photo.file_path.lstrip("/"))
+        repo.delete(photo)
+    return RedirectResponse(url="/admin/gallery", status_code=303)
+
+
+@router.post("/gallery/{photo_id}/move-up")
+def move_photo_up(photo_id: int, db: Session = Depends(get_db)):
+    from repositories.gallery_repository import GalleryRepository
+    photos = list(GalleryRepository(db).get_all())
+    idx = next((i for i, p in enumerate(photos) if p.id == photo_id), None)
+    if idx is not None and idx > 0:
+        photos[idx - 1], photos[idx] = photos[idx], photos[idx - 1]
+        for i, p in enumerate(photos):
+            p.sort_order = i
+        db.commit()
+    return RedirectResponse(url="/admin/gallery", status_code=303)
+
+
+@router.post("/gallery/{photo_id}/move-down")
+def move_photo_down(photo_id: int, db: Session = Depends(get_db)):
+    from repositories.gallery_repository import GalleryRepository
+    photos = list(GalleryRepository(db).get_all())
+    idx = next((i for i, p in enumerate(photos) if p.id == photo_id), None)
+    if idx is not None and idx < len(photos) - 1:
+        photos[idx], photos[idx + 1] = photos[idx + 1], photos[idx]
+        for i, p in enumerate(photos):
+            p.sort_order = i
+        db.commit()
+    return RedirectResponse(url="/admin/gallery", status_code=303)
+
+
+@router.post("/gallery/{photo_id}/edit-caption")
+def edit_caption(
+    photo_id: int,
+    caption:  str     = Form(""),
+    db:       Session = Depends(get_db),
+):
+    from repositories.gallery_repository import GalleryRepository
+    photo = GalleryRepository(db).get_by_id(photo_id)
+    if photo:
+        photo.caption = caption.strip() or None
+        db.commit()
+    return RedirectResponse(url="/admin/gallery", status_code=303)
+
+
+@router.post("/gallery/{photo_id}/set-background")
+def set_background(photo_id: int, db: Session = Depends(get_db)):
+    from repositories.gallery_repository import GalleryRepository
+    repo  = GalleryRepository(db)
+    photo = repo.get_by_id(photo_id)
+    if photo:
+        was_bg = photo.is_background
+        for p in repo.get_all():
+            p.is_background = False
+        if not was_bg:
+            photo.is_background = True
+        db.commit()
+    return RedirectResponse(url="/admin/gallery", status_code=303)
+
+
+# ── Settings (Logo) ──────────────────────────────────────────────────────────
+@router.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request):
+    return templates.TemplateResponse("admin_settings.html", {
+        "request":   request,
+        "app_name":  config.app_name,
+        "logo_path": SITE.get("logo_path"),
+        "site_name": SITE.get("site_name") or "",
+    })
+
+
+@router.post("/settings/name")
+def save_site_name(name: str = Form("")):
+    value = name.strip() or None
+    set_site_name(value)
+    SITE["site_name"] = value
+    return RedirectResponse(url="/admin/settings", status_code=303)
+
+
+@router.post("/settings/logo/upload")
+def upload_logo(image: UploadFile = File(...)):
+    if not image or not image.filename:
+        return RedirectResponse(url="/admin/settings", status_code=303)
+    os.makedirs("static/images/logo", exist_ok=True)
+    ext       = os.path.splitext(image.filename)[1].lower()
+    file_path = f"static/images/logo/logo{ext}"
+    with open(file_path, "wb") as f:
+        f.write(image.file.read())
+    path = f"/{file_path}"
+    set_logo_path(path)
+    SITE["logo_path"] = path
+    return RedirectResponse(url="/admin/settings", status_code=303)
+
+
+@router.post("/settings/logo/delete")
+def delete_logo():
+    current = get_logo_path()
+    if current and os.path.exists(current.lstrip("/")):
+        os.remove(current.lstrip("/"))
+    set_logo_path(None)
+    SITE["logo_path"] = None
+    return RedirectResponse(url="/admin/settings", status_code=303)

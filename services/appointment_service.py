@@ -40,16 +40,21 @@ class AppointmentService:
         return self.repo.create(appointment)
 
     def update(self, appointment_id: int, data: AppointmentUpdate) -> Appointment:
-        """Modifica ora sau statusul unei programari existente."""
+        """Modifica ora sau statusul unei programari existente (folosit de admin)."""
         appointment = self._get_or_raise(appointment_id)
 
         if data.date or data.start_time:
             new_date = data.date or appointment.date
             new_time = data.start_time or appointment.start_time
-            slot = self._get_slot_or_raise(new_date, new_time, appointment.frizer_id)
+
+            slot = (
+                self.slots.db.query(__import__("models").TimeSlot)
+                .filter_by(date=new_date, start_time=new_time, frizer_id=appointment.frizer_id)
+                .first()
+            )
             appointment.date       = new_date
             appointment.start_time = new_time
-            appointment.slot_id    = slot.id
+            appointment.slot_id    = slot.id if slot else None
 
         if data.status:
             appointment.status = data.status
@@ -66,6 +71,10 @@ class AppointmentService:
     def get_by_date_and_frizer(self, target_date: date, frizer_id: int) -> list[Appointment]:
         """Programarile dintr-o zi pentru un frizer specific."""
         return self.repo.get_by_date_and_frizer(target_date, frizer_id)
+
+    def get_by_date_range_and_frizer(self, start_date: date, end_date: date, frizer_id: int) -> list[Appointment]:
+        """Programarile dintr-un interval de date pentru un frizer specific."""
+        return self.repo.get_by_date_range_and_frizer(start_date, end_date, frizer_id)
 
     # ── Helpers private ────────────────────────────────────────
     def _get_or_raise(self, appointment_id: int) -> Appointment:
